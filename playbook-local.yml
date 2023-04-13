@@ -1,10 +1,10 @@
 site:
   title: Implicated
   url: https://docs.implicated.com
-  start_page: %COMPONENT%::index.adoc
+  start_page: mybatis::index.adoc
 content:
   sources:
-    - url: ../%REPOSITORY%
+    - url: ../mybatis-docs
       start_paths:
         - docs
       branches: HEAD

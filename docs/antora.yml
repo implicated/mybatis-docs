@@ -1,5 +1,5 @@
-name: %COMPONENT%
-title: %TITLE%
+name: mybatis
+title: Learn Mybatis
 version: ~
 nav:
 - modules/ROOT/nav.adoc
