@@ -1,0 +1,84 @@
+' tag::SqlSessionFactory[]
+@startuml
+autonumber
+title SqlSessionFactory 注入
+
+[-> SqlSessionFactoryBean++ : 手动注入
+SqlSessionFactoryBean -> SqlSessionFactory++ : <b>getObject
+SqlSessionFactory -> SqlSessionFactoryBuilder++ : <b>buildSqlSessionFactory
+SqlSessionFactoryBuilder -> SqlSessionFactoryBuilder : 加载 Configuration
+SqlSessionFactoryBuilder -> SqlSessionFactoryBuilder : 加载 各种配置（别名转换器、插件、类型转换器等）
+group XMLMapperBuilder
+    SqlSessionFactoryBuilder -> SqlSessionFactoryBuilder : 加载 mapper.xml 文件
+    SqlSessionFactoryBuilder -> SqlSessionFactoryBuilder : 加载 mapper.java 文件
+end
+SqlSessionFactoryBuilder -> SqlSessionFactoryBuilder : build
+return
+return
+return 注入 Spring容器
+@enduml
+' end::SqlSessionFactory[]
+
+
+
+
+
+' tag::MapperScans[]
+@startuml
+autonumber
+title 使用 <b>@MapperScan</b> <b>@MapperScans</b> 扫描 Mapper
+
+?-> MapperScannerRegistrar++ : Spring应用上下文refresh，处理<b>@Import时
+MapperScannerRegistrar -> MapperScannerRegistrar : <b>registerBeanDefinitions \
+\n注入
+MapperScannerRegistrar -> MapperScannerConfigurer++ : <b>registerBeanDefinitions \
+\n注入 MapperScannerConfigurer
+MapperScannerConfigurer -> ClassPathMapperScanner++ : <b>postProcessBeanDefinitionRegistry \
+\n扫描并加载 <b>Mapper
+ClassPathMapperScanner -> ClassPathMapperScanner : <b>doScan \
+\n获取 BeanDefinition
+ClassPathMapperScanner -> MapperFactoryBean++ : <b>processBeanDefinitions \
+\n修改加载的 <i>BeanDefinition</i> 的类型为 \n<i>MapperFactoryBean</i>
+MapperFactoryBean -> SqlSessionTemplate++ : <b>createSqlSessionTemplate \
+\n使用 SqlSessionFactory，\n初始化 <i>SqlSessionTemplate</i>
+MapperFactoryBean -> MapperFactoryBean : <b>checkDaoConfig \
+\n使用 <i>Configuration#addMapper</i> \
+\n解析还未解析的 Mapper 接口 \
+\n(<i>SqlSessionFactory</i> 也会解析 Mapper)
+return <b>getMapper</b>，生成动态代理 <i>MapperProxy</i>
+return <b>getObject</b>，返回动态代理 <i>MapperProxy</i>
+return
+return
+return 注入 Spring容器
+@enduml
+' end::MapperScans[]
+
+
+
+
+' tag::auto[]
+@startuml
+autonumber
+title 自动扫描 @Mapper
+
+?-> MybatisAutoConfiguration++ : Spring应用上下文refresh，处理<b>@Import时
+MybatisAutoConfiguration -> MybatisAutoConfiguration : <b>@Import</b> \
+\n AutoConfiguredMapperScannerRegistrar
+MybatisAutoConfiguration -> MapperScannerConfigurer++ : <b>registerBeanDefinitions \
+\n注入 MapperScannerConfigurer
+MapperScannerConfigurer -> ClassPathMapperScanner++ : <b>postProcessBeanDefinitionRegistry \
+\n扫描并加载 <b>Mapper
+ClassPathMapperScanner -> ClassPathMapperScanner : <b>doScan \
+\n获取 BeanDefinition
+ClassPathMapperScanner -> MapperFactoryBean++ : <b>processBeanDefinitions \
+\n修改加载的 BeanDefinition 的类型为 <i><b>MapperFactoryBean
+MapperFactoryBean -> MapperFactoryBean : <b>setSqlSessionFactory
+MapperFactoryBean -> MapperFactoryBean : <b>buildSqlSessionFactory
+MapperFactoryBean -> MapperFactoryBean : <b>createSqlSessionTemplate \
+\n初始化 <i>SqlSessionTemplate</i>
+return <b>getObject</b>，生成动态代理
+return
+return
+return 注入 Spring容器
+@enduml
+' end::auto[]

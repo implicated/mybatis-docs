@@ -1,9 +1,10 @@
 :experimental:
+:idprefix:
+:idseparator: -
 :sectlinks:
 :sectanchors:
 :sectnums:
 :sectnumlevels: 2
-:linkcss:
 :pdf-fontsdir: {asciidoctorconfigdir}/pdf/fonts
 :pdf-themesdir: {asciidoctorconfigdir}/pdf/themes
 :pdf-theme: zh_CN

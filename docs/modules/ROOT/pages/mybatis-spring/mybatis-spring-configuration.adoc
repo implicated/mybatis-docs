@@ -1,0 +1,68 @@
+= MyBatis-Spring 配置项
+
+== `@MapperScan`
+
+[cols="m,a,a"]
+|===
+| property | 作用 | 默认值
+
+| value
+| 同basePackages
+|
+
+| basePackages
+| 扫描MyBatis接口的基本程序包 （字符串数组）。
+
+NOTE: 只有至少有一个方法的接口才会被注册；具体类将被忽略。
+|
+
+| basePackageClasses
+| 扫描指定的每个类所在的包下面的所有被 `@FeignClient` 修饰的类
+|
+
+| nameGenerator
+|
+|
+
+| annotationClass
+|
+|
+
+| markerInterface
+|
+|
+
+| sqlSessionTemplateRef
+| 多数据源配置
+
+* 指定在Spring上下文中有多个 SqlSessionTemplate 的情况下使用哪个 SqlSessionTemplate 。
+|
+
+| sqlSessionFactoryRef
+| 多数据源配置
+
+* 指定在Spring上下文中有多个 SqlSessionFactory 的情况下使用哪个 SqlSessionFactory 。
+|
+
+| factoryBean
+|
+|
+
+| lazyInitialization
+| 是否启用映射器Bean的延迟初始化。
+|
+
+| defaultScope
+|
+| null
+
+.org.mybatis.spring.annotation.MapperScannerRegistrar#registerBeanDefinitions()
+[source,java,indent=0]
+----
+if (!"".equals(defaultScope)) {
+    builder.addPropertyValue("defaultScope", defaultScope);
+}
+----
+
+|===
+

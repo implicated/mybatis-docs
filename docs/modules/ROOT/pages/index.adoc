@@ -1,1 +1,12 @@
 = Learn Mybatis
+:table-caption!:
+
+.源码版本
+|===
+| Jar | Version
+
+| org.mybatis:mybatis | 3.5.9
+| org.mybatis:mybatis-spring | 2.0.6
+| tk.mybatis:mapper-spring-boot-starter | 2.1.5
+| com.baomidou:mybatis-plus | 3.5.1
+|===

@@ -1,0 +1,6 @@
+@startuml
+autonumber
+
+XML -> SqlSessionFactory
+SqlSessionFactory -> SqlSession
+@enduml

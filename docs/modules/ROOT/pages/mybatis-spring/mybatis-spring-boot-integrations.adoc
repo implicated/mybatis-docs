@@ -1,0 +1,650 @@
+= SpringBoot 整合 MyBatis 原理
+
+基本流程：
+
+* 使用 `MapperScannerRegistrar` 扫包并
+** 根据 `MapperScan` 信息，注入一个 `MapperScannerConfigurer`
+** 在 `Mapper` 的 `BeanDefinition` 加载后，实例化之前修改注入类型为 `MapperFactoryBean` 。
+* 使用 `MapperFactoryBean` 为每个 `Mapper` 接口生成 `JDK` 的动态代理 `MapperProxy` 。
+
+核心类：
+
+[cols="a,a,a,a"]
+|===
+| MapperScannerConfigurer | MapperFactoryBean | SqlSessionTemplate | SqlSessionFactoryBean
+
+| image::mapper-scanner-configurer.png[]
+| image::mapper-factory-bean.png[]
+| image::sql-session-template.png[]
+| image::sql-session-factory-bean.png[]
+
+|===
+
+== 时序图
+
+[plantuml]
+----
+include::attachment$mybatis-spring.puml[tag=MapperScans]
+----
+
+[plantuml]
+----
+include::attachment$mybatis-spring.puml[tag=SqlSessionFactory]
+----
+
+== 入口
+
+--
+.`org.mybatis.spring.annotation.MapperScan`
+[source,java,indent=0,options=nowrap]
+----
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Documented
+@Import(MapperScannerRegistrar.class) <1>
+@Repeatable(MapperScans.class) <2>
+public @interface MapperScan {
+   // ...
+}
+----
+
+.`org.mybatis.spring.annotation.MapperScans`
+[source,java,indent=0,options=nowrap]
+----
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Documented
+@Import(MapperScannerRegistrar.RepeatingRegistrar.class) <3>
+public @interface MapperScans {
+   // ...
+}
+----
+
+<1> 导入 `Mapper` 扫描注入器
+<2> 重复标注会生成 `MapperScans` 注解
+<3> 导入批量的 `Mapper` 扫描注入器
+--
+
+[NOTE]
+====
+.org.mybatis.spring.annotation.MapperScannerRegistrar.RepeatingRegistrar#registerBeanDefinitions
+[source,java,indent=0,options=nowrap]
+----
+        public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata,
+                                            BeanDefinitionRegistry registry) {
+            AnnotationAttributes mapperScansAttrs = AnnotationAttributes
+                .fromMap(importingClassMetadata.getAnnotationAttributes(MapperScans.class.getName()));
+            if (mapperScansAttrs != null) {
+                AnnotationAttributes[] annotations = mapperScansAttrs.getAnnotationArray("value");
+                for (int i = 0; i < annotations.length; i++) {
+                    // 遍历注入，和 MapperScan 一样
+                    registerBeanDefinitions(importingClassMetadata, annotations[i], registry,
+                        generateBaseBeanName(importingClassMetadata, i));
+                }
+            }
+        }
+----
+====
+
+== `Mapper` 注入器
+
+.org.mybatis.spring.annotation.MapperScannerRegistrar#registerBeanDefinitions
+[source,java,indent=0,options=nowrap]
+----
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        AnnotationAttributes mapperScanAttrs = AnnotationAttributes
+            .fromMap(importingClassMetadata.getAnnotationAttributes(MapperScan.class.getName()));
+        if (mapperScanAttrs != null) {
+            registerBeanDefinitions(importingClassMetadata, mapperScanAttrs, registry,
+                generateBaseBeanName(importingClassMetadata, 0));
+        }
+    }
+----
+
+解析 MapperScan 注解的属性，注入 `MapperScannerConfigurer`
+
+[source,java,indent=0,options=nowrap]
+----
+    void registerBeanDefinitions(AnnotationMetadata annoMeta, AnnotationAttributes annoAttrs,
+                                 BeanDefinitionRegistry registry, String beanName) {
+
+        BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+        builder.addPropertyValue("processPropertyPlaceHolders", true);
+
+        // annoAttrs MapperScan 注解属性
+        Class<? extends Annotation> annotationClass = annoAttrs.getClass("annotationClass");
+        if (!Annotation.class.equals(annotationClass)) {
+            builder.addPropertyValue("annotationClass", annotationClass);
+        }
+
+        Class<?> markerInterface = annoAttrs.getClass("markerInterface");
+        if (!Class.class.equals(markerInterface)) {
+            builder.addPropertyValue("markerInterface", markerInterface);
+        }
+
+        Class<? extends BeanNameGenerator> generatorClass = annoAttrs.getClass("nameGenerator");
+        if (!BeanNameGenerator.class.equals(generatorClass)) {
+            builder.addPropertyValue("nameGenerator", BeanUtils.instantiateClass(generatorClass));
+        }
+
+        Class<? extends MapperFactoryBean> mapperFactoryBeanClass = annoAttrs.getClass("factoryBean");
+        if (!MapperFactoryBean.class.equals(mapperFactoryBeanClass)) {
+            builder.addPropertyValue("mapperFactoryBeanClass", mapperFactoryBeanClass);
+        }
+
+        String sqlSessionTemplateRef = annoAttrs.getString("sqlSessionTemplateRef");
+        if (StringUtils.hasText(sqlSessionTemplateRef)) {
+            builder.addPropertyValue("sqlSessionTemplateBeanName", annoAttrs.getString("sqlSessionTemplateRef"));
+        }
+
+        String sqlSessionFactoryRef = annoAttrs.getString("sqlSessionFactoryRef");
+        if (StringUtils.hasText(sqlSessionFactoryRef)) {
+            builder.addPropertyValue("sqlSessionFactoryBeanName", annoAttrs.getString("sqlSessionFactoryRef"));
+        }
+
+        List<String> basePackages = new ArrayList<>();
+        basePackages.addAll(
+            Arrays.stream(annoAttrs.getStringArray("value")).filter(StringUtils::hasText).collect(Collectors.toList()));
+
+        basePackages.addAll(Arrays.stream(annoAttrs.getStringArray("basePackages")).filter(StringUtils::hasText)
+            .collect(Collectors.toList()));
+
+        basePackages.addAll(Arrays.stream(annoAttrs.getClassArray("basePackageClasses")).map(ClassUtils::getPackageName)
+            .collect(Collectors.toList()));
+
+        // 未配置，使用 MapperScans 所在包
+        if (basePackages.isEmpty()) {
+            basePackages.add(getDefaultBasePackage(annoMeta));
+        }
+
+        String lazyInitialization = annoAttrs.getString("lazyInitialization");
+        if (StringUtils.hasText(lazyInitialization)) {
+            builder.addPropertyValue("lazyInitialization", lazyInitialization);
+        }
+
+        String defaultScope = annoAttrs.getString("defaultScope");
+        if (!AbstractBeanDefinition.SCOPE_DEFAULT.equals(defaultScope)) {
+            builder.addPropertyValue("defaultScope", defaultScope);
+        }
+
+        // , 拼接字符串
+        builder.addPropertyValue("basePackage", StringUtils.collectionToCommaDelimitedString(basePackages));
+
+        // beanName is `cc.implicated.demo.MybatisDemoApplication#MapperScannerRegistrar#0`
+        registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
+
+    }
+----
+
+=== 注入 `Mapper` 接口
+
+`MapperScannerConfigurer` 实现了 `BeanDefinitionRegistryPostProcessor` 接口，会在 `BeanDefinition` 加载后，实例化之前执行 `postProcessBeanDefinitionRegistry` 方法。
+
+--
+.org.mybatis.spring.mapper.MapperScannerConfigurer#postProcessBeanDefinitionRegistry
+[source,java,indent=0,options=nowrap]
+----
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        // 后置处理器 在 BeanDefinition 加载后，实例化之前执行
+
+        // 解析 MapperScan 属性中的占位符，默认 true
+        if (this.processPropertyPlaceHolders) {
+            processPropertyPlaceHolders();
+        }
+
+        // mapper 扫描器
+        ClassPathMapperScanner scanner = new ClassPathMapperScanner(registry);
+        // 是否要将 Mapper 接口添加到 Configuration 全局配置对象中
+        scanner.setAddToConfig(this.addToConfig);
+        // 设置 MapperScan 中的属性
+        scanner.setAnnotationClass(this.annotationClass);
+        scanner.setMarkerInterface(this.markerInterface);
+        scanner.setSqlSessionFactory(this.sqlSessionFactory);
+        scanner.setSqlSessionTemplate(this.sqlSessionTemplate);
+        scanner.setSqlSessionFactoryBeanName(this.sqlSessionFactoryBeanName);
+        scanner.setSqlSessionTemplateBeanName(this.sqlSessionTemplateBeanName);
+        scanner.setResourceLoader(this.applicationContext);
+        scanner.setBeanNameGenerator(this.nameGenerator);
+        scanner.setMapperFactoryBeanClass(this.mapperFactoryBeanClass);
+        if (StringUtils.hasText(lazyInitialization)) {
+            scanner.setLazyInitialization(Boolean.valueOf(lazyInitialization));
+        }
+        if (StringUtils.hasText(defaultScope)) {
+            scanner.setDefaultScope(defaultScope);
+        }
+        // 添加扫描过滤器
+        scanner.registerFilters();
+        // 扫描 and 加载 bean definition
+        scanner.scan(
+            StringUtils.tokenizeToStringArray(this.basePackage,
+                ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
+    }
+----
+--
+
+=== 修改加载的 `BeanDefinition`
+
+.org.mybatis.spring.mapper.ClassPathMapperScanner#doScan
+[source,java,indent=0,options=nowrap]
+----
+    public Set<BeanDefinitionHolder> doScan(String... basePackages) {
+        // 调用父类的doScan方法，扫描并加载 bean
+        Set<BeanDefinitionHolder> beanDefinitions = super.doScan(basePackages);
+
+        if (beanDefinitions.isEmpty()) {
+            LOGGER.warn(() -> "No MyBatis mapper was found in '" + Arrays.toString(basePackages)
+                + "' package. Please check your configuration.");
+        } else {
+            // 修改加载的 Bean Definition
+            processBeanDefinitions(beanDefinitions); <1>
+        }
+
+        return beanDefinitions;
+    }
+----
+
+<1> 核心处理逻辑
++
+.处理前
+[%collapsible]
+====
+image::bean-definition-before.png[]
+====
++
+.处理后
+[%collapsible]
+====
+image::bean-definition-after.png[]
+====
+
+.org.mybatis.spring.mapper.ClassPathMapperScanner#processBeanDefinitions
+[source,java,indent=0,options=nowrap]
+----
+    private void processBeanDefinitions(Set<BeanDefinitionHolder> beanDefinitions) {
+        AbstractBeanDefinition definition;
+        BeanDefinitionRegistry registry = getRegistry();
+        // 修改全部的 BeanDefinition
+        for (BeanDefinitionHolder holder : beanDefinitions) {
+            definition = (AbstractBeanDefinition) holder.getBeanDefinition();
+            boolean scopedProxy = false;
+
+            if (ScopedProxyFactoryBean.class.getName().equals(definition.getBeanClassName())) {
+                definition =
+                    (AbstractBeanDefinition) Optional.ofNullable(((RootBeanDefinition) definition).getDecoratedDefinition())
+                        .map(BeanDefinitionHolder::getBeanDefinition)
+                        .orElseThrow(() ->
+                            new IllegalStateException("The target bean definition of scoped proxy bean not found. " +
+                                "Root bean definition[" + holder + "]"));
+                scopedProxy = true;
+            }
+
+            // 获取原类型
+            String beanClassName = definition.getBeanClassName();
+            LOGGER.debug(() ->
+                "Creating MapperFactoryBean with name '" + holder.getBeanName() + "' and '" + beanClassName + "' " +
+                    "mapperInterface");
+
+            // 设置 MapperFactoryBean<T> 构造器参数 mapperInterface，指定泛型
+            // the mapper interface is the original class of the bean
+            // but, the actual class of the bean is MapperFactoryBean
+            definition.getConstructorArgumentValues().addGenericArgumentValue(beanClassName); // issue #59
+
+            // 修改 beanClass 为 org.mybatis.spring.mapper.MapperFactoryBean
+            definition.setBeanClass(this.mapperFactoryBeanClass); <1>
+
+            // 是否要将接口添加到 Configuration 全局配置对象中，默认为 True
+            definition.getPropertyValues().add("addToConfig", this.addToConfig);
+
+            // Attribute for MockitoPostProcessor
+            // https://github.com/mybatis/spring-boot-starter/issues/475
+            definition.setAttribute(FACTORY_BEAN_OBJECT_TYPE, beanClassName);
+
+            // 是否指定了 SqlSessionFactory
+            boolean explicitFactoryUsed = false;
+
+            // 添加 sqlSessionFactory
+            // SqlSessionDaoSupport.setSqlSessionFactory()
+            if (StringUtils.hasText(this.sqlSessionFactoryBeanName)) {
+                definition.getPropertyValues()
+                    .add("sqlSessionFactory", new RuntimeBeanReference(this.sqlSessionFactoryBeanName));
+                explicitFactoryUsed = true;
+            } else if (this.sqlSessionFactory != null) {
+                definition.getPropertyValues()
+                    .add("sqlSessionFactory", this.sqlSessionFactory);
+                explicitFactoryUsed = true;
+            }
+
+            // 添加 sqlSessionTemplate
+            if (StringUtils.hasText(this.sqlSessionTemplateBeanName)) {
+                // sqlSessionTemplate 覆盖 sqlSessionFactory
+                if (explicitFactoryUsed) {
+                    LOGGER.warn(() -> "Cannot use both: sqlSessionTemplate and sqlSessionFactory together. " +
+                        "sqlSessionFactory is ignored.");
+                }
+                definition.getPropertyValues()
+                    .add("sqlSessionTemplate", new RuntimeBeanReference(this.sqlSessionTemplateBeanName));
+                explicitFactoryUsed = true;
+            } else if (this.sqlSessionTemplate != null) {
+                if (explicitFactoryUsed) {
+                    LOGGER.warn(() -> "Cannot use both: sqlSessionTemplate and sqlSessionFactory together. " +
+                        "sqlSessionFactory is ignored.");
+                }
+                definition.getPropertyValues()
+                    .add("sqlSessionTemplate", this.sqlSessionTemplate);
+                explicitFactoryUsed = true;
+            }
+
+            // 上面没有找到对应的 SqlSessionFactory 或者 sqlSessionTemplate，则指定 mapper 通过类型注入
+            // 注入方式 by type （全局唯一）
+            if (!explicitFactoryUsed) {
+                LOGGER.debug(() -> "Enabling autowire by type for MapperFactoryBean with name '" + holder.getBeanName() + "'.");
+                definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+            }
+
+            definition.setLazyInit(lazyInitialization);
+
+            if (scopedProxy) {
+                continue;
+            }
+
+            if (ConfigurableBeanFactory.SCOPE_SINGLETON.equals(definition.getScope()) && defaultScope != null) {
+                definition.setScope(defaultScope);
+            }
+
+            // 非单例
+            if (!definition.isSingleton()) {
+                BeanDefinitionHolder proxyHolder = ScopedProxyUtils.createScopedProxy(holder, registry, true);
+                if (registry.containsBeanDefinition(proxyHolder.getBeanName())) {
+                    registry.removeBeanDefinition(proxyHolder.getBeanName());
+                }
+                registry.registerBeanDefinition(proxyHolder.getBeanName(), proxyHolder.getBeanDefinition());
+            }
+
+        }
+    }
+----
+
+<1> 关键步骤，将 `Mapper` 接口注入到 `Spring` 容器中的类型修改 `MapperFactoryBean`
+
+== `MapperFactoryBean`
+
+`MapperFactoryBean` 实现了 `FactoryBean<Object>` 接口。
+
+在注册 `MapperFactoryBean` 时，会把 `getObject()` 方法返回的对象注入到 `Spring` 容器中。
+
+.org.mybatis.spring.mapper.MapperFactoryBean#getObject
+[source,java,indent=0,options=nowrap]
+----
+public T getObject() throws Exception {
+    // 从 org.apache.ibatis.session.Configuration#mapperRegistry#knownMappers 中返回 MapperProxy代理对象
+    return getSqlSession().getMapper(this.mapperInterface);
+}
+----
+
+=== `getSqlSession()`
+
+--
+.org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
+[source,java,indent=0,options=nowrap]
+----
+public SqlSession getSqlSession() {
+    return this.sqlSessionTemplate; <1>
+}
+----
+
+<1> 返回一个 `SqlSession` 类型的对象 `SqlSessionTemplate`
+
+.org.springframework.cloud.openfeign.MapperFactoryBean#loadBalance
+[source,java,indent=0,options=nowrap]
+----
+  public void setSqlSessionFactory(SqlSessionFactory sqlSessionFactory) {
+      // sqlSessionTemplate 覆盖 sqlSessionFactory
+    if (this.sqlSessionTemplate == null || sqlSessionFactory != this.sqlSessionTemplate.getSqlSessionFactory()) {
+      this.sqlSessionTemplate = createSqlSessionTemplate(sqlSessionFactory); <1>
+    }
+  }
+----
+
+<1> 使用 `SqlSessionFactory` 初始化 `SqlSessionTemplate`
++
+.org.springframework.cloud.openfeign.MapperFactoryBean#get
+[source,java,indent=0,options=nowrap]
+----
+  protected SqlSessionTemplate createSqlSessionTemplate(
+          SqlSessionFactory sqlSessionFactory) {
+    return new SqlSessionTemplate(sqlSessionFactory);
+  }
+----
+--
+
+=== `getMapper()`
+
+`getMapper` 方法中调用 `Configuration#getMapper()` 方法，最终得到返回的 `MapperProxy` 对象注入到 `SpringContext` 中。
+
+.org.mybatis.spring.SqlSessionTemplate#getMapper
+[source,java,indent=0,options=nowrap]
+----
+public <T> T getMapper(Class<T> type) {
+    return getConfiguration().getMapper(type, this);
+}
+----
+
+== SqlSessionFactoryBean
+
+`SqlSessionFactoryBean` 实现了 `FactoryBean<Object>` 接口和 `InitializingBean` 接口。
+
+=== 初始化
+
+`SqlSessionFactoryBean` 一般是手动注入，它内部持有了 `Mybatis` 的全局配置对象 `Configuration` 。
+
+.org.mybatis.spring.SqlSessionFactoryBean#afterPropertiesSet
+[source,java,indent=0,options=nowrap]
+----
+public void afterPropertiesSet() throws Exception {
+    notNull(dataSource, "Property 'dataSource' is required");
+    notNull(sqlSessionFactoryBuilder, "Property 'sqlSessionFactoryBuilder' is required");
+    state((configuration == null && configLocation == null) || !(configuration != null && configLocation != null),
+        "Property 'configuration' and 'configLocation' can not specified with together");
+
+    this.sqlSessionFactory = buildSqlSessionFactory(); <1>
+}
+----
+
+<1> 代替了 `org.apache.ibatis.session.SqlSessionFactoryBuilder#build` 方法。
+
+.org.mybatis.spring.SqlSessionFactoryBean#buildSqlSessionFactory
+[source,java,indent=0,options=nowrap]
+----
+protected SqlSessionFactory buildSqlSessionFactory() throws Exception {
+
+    final Configuration targetConfiguration;
+
+    XMLConfigBuilder xmlConfigBuilder = null;
+    // 加载 org.apache.ibatis.session.Configuration
+    // 1. 已存在 org.apache.ibatis.session.Configuration
+    if (this.configuration != null) {
+        targetConfiguration = this.configuration;
+        if (targetConfiguration.getVariables() == null) {
+            targetConfiguration.setVariables(this.configurationProperties);
+        } else if (this.configurationProperties != null) {
+            targetConfiguration.getVariables().putAll(this.configurationProperties);
+        }
+    }
+    // 2. 配置了 mybatis-config.xml 配置文件
+    else if (this.configLocation != null) {
+        xmlConfigBuilder = new XMLConfigBuilder(this.configLocation.getInputStream(), null,
+            this.configurationProperties);
+        targetConfiguration = xmlConfigBuilder.getConfiguration();
+    }
+    // 3. 都未指定，创建一个 Configuration 对象
+    else {
+        LOGGER.debug(
+            () -> "Property 'configuration' or 'configLocation' not specified, using default MyBatis " +
+                "Configuration");
+        targetConfiguration = new Configuration();
+        Optional.ofNullable(this.configurationProperties).ifPresent(targetConfiguration::setVariables);
+    }
+
+    // 注册 ObjectFactory
+    Optional.ofNullable(this.objectFactory).ifPresent(targetConfiguration::setObjectFactory);
+    // 注册 ObjectWrapperFactory
+    Optional.ofNullable(this.objectWrapperFactory).ifPresent(targetConfiguration::setObjectWrapperFactory);
+    // 注册 VFS
+    Optional.ofNullable(this.vfs).ifPresent(targetConfiguration::setVfsImpl);
+
+    // 类型别名
+    // 它只与XML配置相关，其存在只是为了减少完全限定类名的冗余键入
+    if (hasLength(this.typeAliasesPackage)) {
+        scanClasses(this.typeAliasesPackage, this.typeAliasesSuperType).stream()
+            // 过滤掉匿名类
+            .filter(clazz -> !clazz.isAnonymousClass())
+            // 过滤接口
+            .filter(clazz -> !clazz.isInterface())
+            // 过滤掉内部类
+            .filter(clazz -> !clazz.isMemberClass())
+            // 注册别名
+            .forEach(targetConfiguration.getTypeAliasRegistry()::registerAlias);
+    }
+    // 单个类型别名
+    if (!isEmpty(this.typeAliases)) {
+        Stream.of(this.typeAliases).forEach(typeAlias -> {
+            targetConfiguration.getTypeAliasRegistry().registerAlias(typeAlias);
+            LOGGER.debug(() -> "Registered type alias: '" + typeAlias + "'");
+        });
+    }
+
+    // 注册插件
+    if (!isEmpty(this.plugins)) {
+        Stream.of(this.plugins).forEach(plugin -> {
+            targetConfiguration.addInterceptor(plugin);
+            LOGGER.debug(() -> "Registered plugin: '" + plugin + "'");
+        });
+    }
+
+    // 类型转换器
+    // JDBCType 与 JAVAType 互转
+    if (hasLength(this.typeHandlersPackage)) {
+        scanClasses(this.typeHandlersPackage, TypeHandler.class).stream().filter(clazz -> !clazz.isAnonymousClass())
+            // 过滤接口
+            .filter(clazz -> !clazz.isInterface())
+            // 过滤抽象类
+            .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
+            // 注册类型转换器
+            .forEach(targetConfiguration.getTypeHandlerRegistry()::register);
+    }
+    // 单个类型转换器
+    if (!isEmpty(this.typeHandlers)) {
+        Stream.of(this.typeHandlers).forEach(typeHandler -> {
+            targetConfiguration.getTypeHandlerRegistry().register(typeHandler);
+            LOGGER.debug(() -> "Registered type handler: '" + typeHandler + "'");
+        });
+    }
+
+    // 枚举转换器
+    targetConfiguration.setDefaultEnumTypeHandler(defaultEnumTypeHandler);
+
+    if (!isEmpty(this.scriptingLanguageDrivers)) {
+        Stream.of(this.scriptingLanguageDrivers).forEach(languageDriver -> {
+            targetConfiguration.getLanguageRegistry().register(languageDriver);
+            LOGGER.debug(() -> "Registered scripting language driver: '" + languageDriver + "'");
+        });
+    }
+    Optional.ofNullable(this.defaultScriptingLanguageDriver)
+        .ifPresent(targetConfiguration::setDefaultScriptingLanguage);
+
+    // 数据库id
+    if (this.databaseIdProvider != null) {
+        try {
+            targetConfiguration.setDatabaseId(this.databaseIdProvider.getDatabaseId(this.dataSource));
+        } catch (SQLException e) {
+            throw new NestedIOException("Failed getting a databaseId", e);
+        }
+    }
+
+    // 缓存
+    Optional.ofNullable(this.cache).ifPresent(targetConfiguration::addCache);
+
+    // 如果不为空，解析 mybatis 配置
+    if (xmlConfigBuilder != null) {
+        try {
+            xmlConfigBuilder.parse();
+            LOGGER.debug(() -> "Parsed configuration file: '" + this.configLocation + "'");
+        } catch (Exception ex) {
+            throw new NestedIOException("Failed to parse config resource: " + this.configLocation, ex);
+        } finally {
+            ErrorContext.instance().reset();
+        }
+    }
+
+    // 设置 MyBatis Environment
+    // MyBatis 支持多数据源，但每个 sqlSessionFactory 只能选择一个
+    // 多个数据源需要创建多个 SqlSessionFactory 实例
+    targetConfiguration.setEnvironment(new Environment(
+        // id，默认为 SqlSessionFactoryBean
+        this.environment,
+        // 事务管理器
+        this.transactionFactory == null ? new SpringManagedTransactionFactory() : this.transactionFactory,
+        // 数据源
+        this.dataSource));
+
+    // 注册 mapper.java 和 mapper.xml 文件
+    if (this.mapperLocations != null) {
+        if (this.mapperLocations.length == 0) {
+            LOGGER.warn(() -> "Property 'mapperLocations' was specified but matching resources are not found.");
+        } else {
+            // 遍历全部 mapper 接口
+            for (Resource mapperLocation : this.mapperLocations) {
+                if (mapperLocation == null) {
+                    continue;
+                }
+                try {
+                    XMLMapperBuilder xmlMapperBuilder =
+                        new XMLMapperBuilder(mapperLocation.getInputStream(), targetConfiguration,
+                            mapperLocation.toString(), targetConfiguration.getSqlFragments());
+                    // 解析 mapper.java 和 mapper.xml 文件
+                    xmlMapperBuilder.parse();
+                } catch (Exception e) {
+                    throw new NestedIOException("Failed to parse mapping resource: '" + mapperLocation + "'", e);
+                } finally {
+                    ErrorContext.instance().reset();
+                }
+                LOGGER.debug(() -> "Parsed mapper file: '" + mapperLocation + "'");
+            }
+        }
+    } else {
+        LOGGER.debug(() -> "Property 'mapperLocations' was not specified.");
+    }
+
+    return this.sqlSessionFactoryBuilder.build(targetConfiguration); <1>
+}
+----
+
+<1> 实际注入的是 `DefaultSqlSessionFactory` 。
++
+.org.apache.ibatis.session.SqlSessionFactoryBuilder#build
+[source,java,indent=0,options=nowrap]
+----
+public SqlSessionFactory build(Configuration config) {
+    return new DefaultSqlSessionFactory(config);
+}
+----
++
+[%collapsible]
+====
+image::default-sql-session-factory.png[]
+====
+
+=== 注入 `SqlSessionFactory`
+
+[source,java,indent=0,options=nowrap]
+----
+public SqlSessionFactory getObject() throws Exception {
+    // 如果为空，则初始化
+    if (this.sqlSessionFactory == null) {
+        afterPropertiesSet();
+    }
+
+    return this.sqlSessionFactory;
+}
+----
+

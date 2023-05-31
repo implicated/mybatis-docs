@@ -1,0 +1,9 @@
+= MyBatis 的组成
+
+== MyBatis 架构
+
+image::mybatis-component.png[]
+
+== MyBatis 源码
+
+image::mybatis-component-package.png[]
