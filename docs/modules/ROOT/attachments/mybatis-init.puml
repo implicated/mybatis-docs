@@ -1,6 +1,13 @@
 @startuml
 autonumber
 
-XML -> SqlSessionFactory
-SqlSessionFactory -> SqlSession
+SqlSessionFactoryBuilder -> XMLConfigBuilder++ : build
+XMLConfigBuilder -> Configuration++ : parse
+Configuration -> Configuration : parseConfiguration
+Configuration -> XMLMapperBuilder++ : mapperElement
+XMLMapperBuilder -> XMLMapperBuilder : configurationElement
+XMLMapperBuilder -> XMLMapperBuilder : bindMapperForNamespace
+return parse
+return build
+return SqlSessionFactory
 @enduml

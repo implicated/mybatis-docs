@@ -377,9 +377,17 @@ image::bean-definition-after.png[]
 ----
 public T getObject() throws Exception {
     // 从 org.apache.ibatis.session.Configuration#mapperRegistry#knownMappers 中返回 MapperProxy代理对象
-    return getSqlSession().getMapper(this.mapperInterface);
+    return getSqlSession().getMapper(this.mapperInterface); <1>
 }
 ----
+
+<1> 最终注入容器的是一个 `MapperProxy` 对象
++
+.MapperProxy
+[%collapsible]
+====
+image::mapper.png[]
+====
 
 === `getSqlSession()`
 
@@ -425,9 +433,17 @@ public SqlSession getSqlSession() {
 [source,java,indent=0,options=nowrap]
 ----
 public <T> T getMapper(Class<T> type) {
-    return getConfiguration().getMapper(type, this);
+    return getConfiguration().getMapper(type, this); <1>
 }
 ----
+<1> 保存在 `Configuration` 全局对象中
++
+.Configuration
+[%collapsible]
+====
+image::configuration-object.png[]
+====
+
 
 == SqlSessionFactoryBean
 
@@ -629,6 +645,7 @@ public SqlSessionFactory build(Configuration config) {
 }
 ----
 +
+.DefaultSqlSessionFactory
 [%collapsible]
 ====
 image::default-sql-session-factory.png[]

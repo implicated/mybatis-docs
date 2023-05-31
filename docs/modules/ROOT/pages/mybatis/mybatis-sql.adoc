@@ -82,11 +82,11 @@ image::mapper-proxy.png[]
 .org.apache.ibatis.binding.MapperMethod#execute
 [source,java,indent=0,options=nowrap]
 ----
-    public Object execute(SqlSession sqlSession, Object[] args) {
+    public Object execute(SqlSession sqlSession, Object[] args) { <1>
         Object result;
         switch (command.getType()) {
+            // sqlSession.insert()
             case INSERT: {
-                // sqlSession.insert()
                 Object param = method.convertArgsToSqlCommandParam(args);
                 result = rowCountResult(sqlSession.insert(command.getName(), param));
                 break;
@@ -142,6 +142,13 @@ image::mapper-proxy.png[]
         return result;
     }
 ----
+<1> {empty}
++
+.SqlSession
+[%collapsible]
+====
+image::default-sql-session-object.png[]
+====
 
 == DefaultSqlSession
 
