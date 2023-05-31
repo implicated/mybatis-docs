@@ -1,4 +1,5 @@
 = MyBatis 初始化流程
+:toc:
 
 基本流程：
 
@@ -301,8 +302,9 @@ private void buildStatementFromContext(List<XNode> list, String requiredDatabase
     }
 ----
 
-具体的解析在 `XMLStatementBuilder#parseStatementNode` 方法中。 .org.apache.ibatis.builder.xml.XMLStatementBuilder#parseStatementNode
+具体的解析在 `XMLStatementBuilder#parseStatementNode` 方法中。
 
+.org.apache.ibatis.builder.xml.XMLStatementBuilder#parseStatementNode
 [source,java,indent=0,options=nowrap]
 ----
     public void parseStatementNode() {

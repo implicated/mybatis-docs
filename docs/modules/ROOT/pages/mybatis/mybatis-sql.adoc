@@ -82,66 +82,67 @@ image::mapper-proxy.png[]
 .org.apache.ibatis.binding.MapperMethod#execute
 [source,java,indent=0,options=nowrap]
 ----
-    public Object execute(SqlSession sqlSession, Object[] args) { <1>
-        Object result;
-        switch (command.getType()) {
-            // sqlSession.insert()
-            case INSERT: {
-                Object param = method.convertArgsToSqlCommandParam(args);
-                result = rowCountResult(sqlSession.insert(command.getName(), param));
-                break;
-            }
-            // sqlSession.update()
-            case UPDATE: {
-                Object param = method.convertArgsToSqlCommandParam(args);
-                result = rowCountResult(sqlSession.update(command.getName(), param));
-                break;
-            }
-            // sqlSession.()
-            case DELETE: {
-                Object param = method.convertArgsToSqlCommandParam(args);
-                result = rowCountResult(sqlSession.delete(command.getName(), param));
-                break;
-            }
-            case SELECT:
-                // 当返回空 or 持有 ResultHandler
-                if (method.returnsVoid() && method.hasResultHandler()) {
-                    executeWithResultHandler(sqlSession, args);
-                    result = null;
-                }
-                // 当返回集合 or  数组
-                else if (method.returnsMany()) {
-                    result = executeForMany(sqlSession, args);
-                }
-                // 当返回 Map
-                else if (method.returnsMap()) {
-                    result = executeForMap(sqlSession, args);
-                }
-                // 当返回 游标
-                else if (method.returnsCursor()) {
-                    result = executeForCursor(sqlSession, args);
-                } else {
-                    Object param = method.convertArgsToSqlCommandParam(args);
-                    result = sqlSession.selectOne(command.getName(), param);
-                    if (method.returnsOptional()
-                        && (result == null || !method.getReturnType().equals(result.getClass()))) {
-                        result = Optional.ofNullable(result);
-                    }
-                }
-                break;
-            case FLUSH:
-                result = sqlSession.flushStatements();
-                break;
-            default:
-                throw new BindingException("Unknown execution method for: " + command.getName());
+public Object execute(SqlSession sqlSession, Object[] args) { <1>
+    Object result;
+    switch (command.getType()) {
+        // sqlSession.insert()
+        case INSERT: {
+            Object param = method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.insert(command.getName(), param));
+            break;
         }
-        if (result == null && method.getReturnType().isPrimitive() && !method.returnsVoid()) {
-            throw new BindingException("Mapper method '" + command.getName()
-                + " attempted to return null from a method with a primitive return type (" + method.getReturnType() + ").");
+        // sqlSession.update()
+        case UPDATE: {
+            Object param = method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.update(command.getName(), param));
+            break;
         }
-        return result;
+        // sqlSession.()
+        case DELETE: {
+            Object param = method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.delete(command.getName(), param));
+            break;
+        }
+        case SELECT:
+            // 当返回空 or 持有 ResultHandler
+            if (method.returnsVoid() && method.hasResultHandler()) {
+                executeWithResultHandler(sqlSession, args);
+                result = null;
+            }
+            // 当返回集合 or  数组
+            else if (method.returnsMany()) {
+                result = executeForMany(sqlSession, args);
+            }
+            // 当返回 Map
+            else if (method.returnsMap()) {
+                result = executeForMap(sqlSession, args);
+            }
+            // 当返回 游标
+            else if (method.returnsCursor()) {
+                result = executeForCursor(sqlSession, args);
+            } else {
+                Object param = method.convertArgsToSqlCommandParam(args);
+                result = sqlSession.selectOne(command.getName(), param);
+                if (method.returnsOptional()
+                    && (result == null || !method.getReturnType().equals(result.getClass()))) {
+                    result = Optional.ofNullable(result);
+                }
+            }
+            break;
+        case FLUSH:
+            result = sqlSession.flushStatements();
+            break;
+        default:
+            throw new BindingException("Unknown execution method for: " + command.getName());
     }
+    if (result == null && method.getReturnType().isPrimitive() && !method.returnsVoid()) {
+        throw new BindingException("Mapper method '" + command.getName()
+            + " attempted to return null from a method with a primitive return type (" + method.getReturnType() + ").");
+    }
+    return result;
+}
 ----
+
 <1> {empty}
 +
 .SqlSession
@@ -372,8 +373,8 @@ To Be Continued.
 public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement,
                                             Object parameterObject, RowBounds rowBounds,
                                             ResultHandler resultHandler, BoundSql boundSql) {
-    // TODO 策略模式
     // 根据 MappedStatement.statementType 返回不同的 StatementHandler
+    // 创建 StatementHandler 时，会同时生成 ParameterHandler 和 ResultSetHandler 用于处理请求参数和结果集
     StatementHandler statementHandler = new RoutingStatementHandler(executor, mappedStatement, parameterObject,
         rowBounds, resultHandler, boundSql);
     // 应用插件
@@ -382,31 +383,60 @@ public StatementHandler newStatementHandler(Executor executor, MappedStatement m
 }
 ----
 
+==== 根据 `MappedStatement.statementType` 路由不同的 `MappedStatement`
+
 .org.apache.ibatis.executor.statement.RoutingStatementHandler#RoutingStatementHandler
 [source,java,indent=0,options=nowrap]
 ----
-  public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
 
+    // 不同的 StatementHandler 构造器方法统一都在 BaseStatementHandler
     switch (ms.getStatementType()) {
-      case STATEMENT: <1>
-        delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      case PREPARED: <2>
-        delegate = new PreparedStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      case CALLABLE: <3>
-        delegate = new CallableStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-        break;
-      default:
-        throw new ExecutorException("Unknown statement type: " + ms.getStatementType());
+        case STATEMENT: <1>
+            delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            break;
+        case PREPARED: <2>
+            delegate = new PreparedStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            break;
+        case CALLABLE: <3>
+            delegate = new CallableStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            break;
+        default:
+            throw new ExecutorException("Unknown statement type: " + ms.getStatementType());
     }
-
-  }
+}
 ----
 
 <1> 可直接操作的 `SQL` ，对应 `JDBC` 的 `Statement`
 <2> 预处理处理器 ，对应 `JDBC` 的 `PreparedStatement`
 <3> 存储过程处理器 ，对应 `JDBC` 的 `CallableStatement`
+
+==== 统一构造方法
+
+.org.apache.ibatis.executor.statement.BaseStatementHandler#BaseStatementHandler
+[source,java,indent=0,options=nowrap]
+----
+protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    this.configuration = mappedStatement.getConfiguration();
+    this.executor = executor;
+    this.mappedStatement = mappedStatement;
+    this.rowBounds = rowBounds;
+
+    this.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
+    this.objectFactory = configuration.getObjectFactory();
+
+    if (boundSql == null) {
+        generateKeys(parameterObject);
+        boundSql = mappedStatement.getBoundSql(parameterObject);
+    }
+
+    this.boundSql = boundSql;
+
+    this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+    this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds,
+        parameterHandler, resultHandler, boundSql);
+}
+----
 
 === 执行 `SQL`
 
@@ -415,10 +445,13 @@ public StatementHandler newStatementHandler(Executor executor, MappedStatement m
 ----
 public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     String sql = boundSql.getSql();
-    statement.execute(sql);
-    return resultSetHandler.handleResultSets(statement);
+    statement.execute(sql); <1>
+    return resultSetHandler.handleResultSets(statement); <2>
 }
 ----
+
+<1> `JDBC` 查询
+<2> 处理结果集
 
 == ResultSetHandler
 
