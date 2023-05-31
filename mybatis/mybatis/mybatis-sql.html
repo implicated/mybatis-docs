@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>MyBatis 执行流程 :: Implicated</title>
+    <link rel="canonical" href="https://docs.implicated.com/mybatis/mybatis/mybatis-sql.html">
+    <link rel="prev" href="mybatis-init.html">
+    <link rel="next" href="mybatis-plugin.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script>var uiRootPath = '../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://docs.implicated.com">Implicated</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="mybatis" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Learn MyBatis</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction.html">基本介绍</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">MyBatis</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="mybatis-component.html">MyBatis 的组成</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="mybatis-init.html">MyBatis 初始化流程</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="mybatis-sql.html">MyBatis 执行流程</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="mybatis-plugin.html">MyBatis 插件</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">MyBatis Spring</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../mybatis-spring/mybatis-spring-integrations.html">Spring 整合 MyBatis 原理</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Learn MyBatis</a></li>
+    <li>MyBatis</li>
+    <li><a href="mybatis-sql.html">MyBatis 执行流程</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">MyBatis 执行流程</h1>
+<div class="sect1">
+<h2 id="时序图"><a class="anchor" href="#时序图"></a>时序图</h2>
+<div class="sectionbody">
+<div class="imageblock kroki">
+<div class="content">
+<img src="../_images/diag-88f6199ee198bdb35e0972625630f5413fcde777.svg" alt="Diagram">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="mapperproxy"><a class="anchor" href="#mapperproxy"></a>MapperProxy</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>MapperProxy 实现了 <code>JDK</code> 动态代理的 <code>InvocationHandler</code> 接口，当 执行 <code>mapper</code> 中的方法是会进入到 <code>MapperProxy</code> 的 <code>invoke</code> 方法。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/mapper-proxy.png" alt="mapper proxy">
+</div>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.binding.MapperProxy#invoke</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> Object <span class="hljs-title function_">invoke</span><span class="hljs-params">(Object proxy, Method method, Object[] args)</span> <span class="hljs-keyword">throws</span> Throwable {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// Object方法直接执行</span>
+        <span class="hljs-keyword">if</span> (Object.class.equals(method.getDeclaringClass())) {
+            <span class="hljs-keyword">return</span> method.invoke(<span class="hljs-built_in">this</span>, args);
+        }
+        <span class="hljs-comment">// 执行 Mapper 中的方法</span>
+        <span class="hljs-keyword">return</span> cachedInvoker(method).invoke(proxy, method, args, sqlSession);
+    } <span class="hljs-keyword">catch</span> (Throwable t) {
+        <span class="hljs-keyword">throw</span> ExceptionUtil.unwrapThrowable(t);
+    }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.binding.MapperProxy#cachedInvoker</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">private</span> MapperMethodInvoker <span class="hljs-title function_">cachedInvoker</span><span class="hljs-params">(Method method)</span> <span class="hljs-keyword">throws</span> Throwable {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// 先查缓存的方法</span>
+        <span class="hljs-keyword">return</span> MapUtil.computeIfAbsent(methodCache, method,
+            m -&gt; {
+                <span class="hljs-comment">// 处理接口中的默认方法</span>
+                <span class="hljs-keyword">if</span> (m.isDefault()) {
+                    <span class="hljs-keyword">try</span> {
+                        <span class="hljs-comment">// JDK9 新方法  privateLookupIn(Class&lt;?&gt; targetClass, MethodHandles.Lookup lookup)</span>
+                        <span class="hljs-keyword">if</span> (privateLookupInMethod == <span class="hljs-literal">null</span>) {
+                            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">DefaultMethodInvoker</span>(getMethodHandleJava8(method));
+                        } <span class="hljs-keyword">else</span> {
+                            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">DefaultMethodInvoker</span>(getMethodHandleJava9(method));
+                        }
+                    } <span class="hljs-keyword">catch</span> (IllegalAccessException | InstantiationException | InvocationTargetException
+                             | NoSuchMethodException e) {
+                        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeException</span>(e);
+                    }
+                }
+                <span class="hljs-comment">// 处理其它方法</span>
+                <span class="hljs-keyword">else</span> {
+                    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">PlainMethodInvoker</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">MapperMethod</span>(mapperInterface, method,
+                        sqlSession.getConfiguration())); <i class="conum" data-value="1"></i><b>(1)</b>
+                }
+            });
+    } <span class="hljs-keyword">catch</span> (RuntimeException re) {
+        <span class="hljs-type">Throwable</span> <span class="hljs-variable">cause</span> <span class="hljs-operator">=</span> re.getCause();
+        <span class="hljs-keyword">throw</span> cause == <span class="hljs-literal">null</span> ? re : cause;
+    }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>每个方法对应一个 <code>MapperMethod</code> 对象。</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><code>PlainMethodInvoker</code> 是 <code>MapperProxy</code> 中的一个内部类，同样实现了 <code>InvocationHandler</code> 接口。在 <code>invoke</code> 方法中调用了 <code>MapperMethod</code> 的 <code>execute</code> 方法。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-meta">@Override</span>
+<span class="hljs-keyword">public</span> Object <span class="hljs-title function_">invoke</span><span class="hljs-params">(Object proxy, Method method, Object[] args, SqlSession sqlSession)</span> <span class="hljs-keyword">throws</span> Throwable {
+    <span class="hljs-keyword">return</span> mapperMethod.execute(sqlSession, args);
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>MapperMethod</code> 的 <code>execute</code> 方法中调用 <code>sqlSession</code> 中定义的方法执行 <code>SQL</code></p>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.binding.MapperMethod#execute</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> Object <span class="hljs-title function_">execute</span><span class="hljs-params">(SqlSession sqlSession, Object[] args)</span> {
+    Object result;
+    <span class="hljs-keyword">switch</span> (command.getType()) {
+        <span class="hljs-keyword">case</span> INSERT: {
+            <span class="hljs-comment">// sqlSession.insert()</span>
+            <span class="hljs-type">Object</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.insert(command.getName(), param));
+            <span class="hljs-keyword">break</span>;
+        }
+        <span class="hljs-comment">// sqlSession.update()</span>
+        <span class="hljs-keyword">case</span> UPDATE: {
+            <span class="hljs-type">Object</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.update(command.getName(), param));
+            <span class="hljs-keyword">break</span>;
+        }
+        <span class="hljs-comment">// sqlSession.()</span>
+        <span class="hljs-keyword">case</span> DELETE: {
+            <span class="hljs-type">Object</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> method.convertArgsToSqlCommandParam(args);
+            result = rowCountResult(sqlSession.delete(command.getName(), param));
+            <span class="hljs-keyword">break</span>;
+        }
+        <span class="hljs-keyword">case</span> SELECT:
+            <span class="hljs-comment">// 当返回空 or 持有 ResultHandler</span>
+            <span class="hljs-keyword">if</span> (method.returnsVoid() &amp;&amp; method.hasResultHandler()) {
+                executeWithResultHandler(sqlSession, args);
+                result = <span class="hljs-literal">null</span>;
+            }
+            <span class="hljs-comment">// 当返回集合 or  数组</span>
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (method.returnsMany()) {
+                result = executeForMany(sqlSession, args);
+            }
+            <span class="hljs-comment">// 当返回 Map</span>
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (method.returnsMap()) {
+                result = executeForMap(sqlSession, args);
+            }
+            <span class="hljs-comment">// 当返回 游标</span>
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (method.returnsCursor()) {
+                result = executeForCursor(sqlSession, args);
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-type">Object</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> method.convertArgsToSqlCommandParam(args);
+                result = sqlSession.selectOne(command.getName(), param);
+                <span class="hljs-keyword">if</span> (method.returnsOptional()
+                    &amp;&amp; (result == <span class="hljs-literal">null</span> || !method.getReturnType().equals(result.getClass()))) {
+                    result = Optional.ofNullable(result);
+                }
+            }
+            <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> FLUSH:
+            result = sqlSession.flushStatements();
+            <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">default</span>:
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BindingException</span>(<span class="hljs-string">&quot;Unknown execution method for: &quot;</span> + command.getName());
+    }
+    <span class="hljs-keyword">if</span> (result == <span class="hljs-literal">null</span> &amp;&amp; method.getReturnType().isPrimitive() &amp;&amp; !method.returnsVoid()) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">BindingException</span>(<span class="hljs-string">&quot;Mapper method &#x27;&quot;</span> + command.getName()
+            + <span class="hljs-string">&quot; attempted to return null from a method with a primitive return type (&quot;</span> + method.getReturnType() + <span class="hljs-string">&quot;).&quot;</span>);
+    }
+    <span class="hljs-keyword">return</span> result;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="defaultsqlsession"><a class="anchor" href="#defaultsqlsession"></a>DefaultSqlSession</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>DefaultSqlSession 是 DefaultSqlSession 的默认实现</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/default-sql-session.png" alt="default sql session">
+</div>
+</div>
+<div class="sect2">
+<h3 id="insert-update-delete-方法"><a class="anchor" href="#insert-update-delete-方法"></a>insert update delete 方法</h3>
+<div class="paragraph">
+<p>全都进入 <code>update(java.lang.String, java.lang.Object)</code></p>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.session.defaults.DefaultSqlSession#update</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-type">int</span> <span class="hljs-title function_">update</span><span class="hljs-params">(String statement, Object parameter)</span> {
+  <span class="hljs-keyword">try</span> {
+    dirty = <span class="hljs-literal">true</span>;
+    <span class="hljs-type">MappedStatement</span> <span class="hljs-variable">ms</span> <span class="hljs-operator">=</span> configuration.getMappedStatement(statement);
+    <span class="hljs-keyword">return</span> executor.update(ms, wrapCollection(parameter));
+  } <span class="hljs-keyword">catch</span> (Exception e) {
+    <span class="hljs-keyword">throw</span> ExceptionFactory.wrapException(<span class="hljs-string">&quot;Error updating database.  Cause: &quot;</span> + e, e);
+  } <span class="hljs-keyword">finally</span> {
+    ErrorContext.instance().reset();
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="select-方法"><a class="anchor" href="#select-方法"></a>select 方法</h3>
+<div class="paragraph">
+<p>根据返回值的不同分进入 <code>selectList</code>、<code>selectMap</code>、<code>selectCursor</code> 方法。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">private</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">selectList</span><span class="hljs-params">(String statement, Object parameter, RowBounds rowBounds, ResultHandler handler)</span> {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-type">MappedStatement</span> <span class="hljs-variable">ms</span> <span class="hljs-operator">=</span> configuration.getMappedStatement(statement);
+        <span class="hljs-keyword">return</span> executor.query(ms, wrapCollection(parameter), rowBounds, handler);
+    } <span class="hljs-keyword">catch</span> (Exception e) {
+        <span class="hljs-keyword">throw</span> ExceptionFactory.wrapException(<span class="hljs-string">&quot;Error querying database.  Cause: &quot;</span> + e, e);
+    } <span class="hljs-keyword">finally</span> {
+        ErrorContext.instance().reset();
+    }
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;K, V&gt; Map&lt;K, V&gt; <span class="hljs-title function_">selectMap</span><span class="hljs-params">(String statement, Object parameter, String mapKey, RowBounds rowBounds)</span> {
+    <span class="hljs-keyword">final</span> List&lt;? <span class="hljs-keyword">extends</span> <span class="hljs-title class_">V</span>&gt; list = selectList(statement, parameter, rowBounds);
+    <span class="hljs-keyword">final</span> DefaultMapResultHandler&lt;K, V&gt; mapResultHandler = <span class="hljs-keyword">new</span> <span class="hljs-title class_">DefaultMapResultHandler</span>&lt;&gt;(mapKey,
+        configuration.getObjectFactory(), configuration.getObjectWrapperFactory(),
+        configuration.getReflectorFactory());
+    <span class="hljs-keyword">final</span> DefaultResultContext&lt;V&gt; context = <span class="hljs-keyword">new</span> <span class="hljs-title class_">DefaultResultContext</span>&lt;&gt;();
+    <span class="hljs-keyword">for</span> (V o : list) {
+        context.nextResultObject(o);
+        mapResultHandler.handleResult(context);
+    }
+    <span class="hljs-keyword">return</span> mapResultHandler.getMappedResults();
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;T&gt; Cursor&lt;T&gt; <span class="hljs-title function_">selectCursor</span><span class="hljs-params">(String statement, Object parameter, RowBounds rowBounds)</span> {
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-type">MappedStatement</span> <span class="hljs-variable">ms</span> <span class="hljs-operator">=</span> configuration.getMappedStatement(statement);
+        Cursor&lt;T&gt; cursor = executor.queryCursor(ms, wrapCollection(parameter), rowBounds);
+        registerCursor(cursor);
+        <span class="hljs-keyword">return</span> cursor;
+    } <span class="hljs-keyword">catch</span> (Exception e) {
+        <span class="hljs-keyword">throw</span> ExceptionFactory.wrapException(<span class="hljs-string">&quot;Error querying database.  Cause: &quot;</span> + e, e);
+    } <span class="hljs-keyword">finally</span> {
+        ErrorContext.instance().reset();
+    }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>这些方法都是在 <code>BaseExecutor</code> 中定义的模板方法，具体执行 <code>SQL</code> 操作的方法由子类来实现。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="executor"><a class="anchor" href="#executor"></a>Executor</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>BaseExecutor</code> 作为基干类，其中除了定义的 SQL 执行的模板方法外，还有一级缓存相关的处理。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="../_images/executor.png" alt="executor">
+</div>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.BaseExecutor#query</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">query</span><span class="hljs-params">(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler)</span> <span class="hljs-keyword">throws</span> SQLException {
+    <span class="hljs-comment">// 获取 SQL</span>
+    <span class="hljs-type">BoundSql</span> <span class="hljs-variable">boundSql</span> <span class="hljs-operator">=</span> ms.getBoundSql(parameter);
+    <span class="hljs-comment">// 获取缓存 Key</span>
+    <span class="hljs-type">CacheKey</span> <span class="hljs-variable">key</span> <span class="hljs-operator">=</span> createCacheKey(ms, parameter, rowBounds, boundSql);
+    <span class="hljs-keyword">return</span> query(ms, parameter, rowBounds, resultHandler, key, boundSql);
+}</code></pre>
+</div>
+</div>
+<div class="sect2">
+<h3 id="获取-sql"><a class="anchor" href="#获取-sql"></a>获取 <code>SQL</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> BoundSql <span class="hljs-title function_">getBoundSql</span><span class="hljs-params">(Object parameterObject)</span> {
+    <span class="hljs-type">BoundSql</span> <span class="hljs-variable">boundSql</span> <span class="hljs-operator">=</span> sqlSource.getBoundSql(parameterObject); <i class="conum" data-value="1"></i><b>(1)</b>
+    List&lt;ParameterMapping&gt; parameterMappings = boundSql.getParameterMappings();
+    <span class="hljs-keyword">if</span> (parameterMappings == <span class="hljs-literal">null</span> || parameterMappings.isEmpty()) {
+        boundSql = <span class="hljs-keyword">new</span> <span class="hljs-title class_">BoundSql</span>(configuration, boundSql.getSql(), parameterMap.getParameterMappings(),
+            parameterObject);
+    }
+
+    <span class="hljs-comment">// check for nested result maps in parameter mappings (issue #30)</span>
+    <span class="hljs-keyword">for</span> (ParameterMapping pm : boundSql.getParameterMappings()) {
+        <span class="hljs-type">String</span> <span class="hljs-variable">rmId</span> <span class="hljs-operator">=</span> pm.getResultMapId();
+        <span class="hljs-keyword">if</span> (rmId != <span class="hljs-literal">null</span>) {
+            <span class="hljs-type">ResultMap</span> <span class="hljs-variable">rm</span> <span class="hljs-operator">=</span> configuration.getResultMap(rmId);
+            <span class="hljs-keyword">if</span> (rm != <span class="hljs-literal">null</span>) {
+                hasNestedResultMaps |= rm.hasNestedResultMaps();
+            }
+        }
+    }
+
+    <span class="hljs-keyword">return</span> boundSql;
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>这里会解析动态 <code>SQL</code> 中的  <code>#{}</code> 和 <code>${}</code></td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="一级缓存处理"><a class="anchor" href="#一级缓存处理"></a>一级缓存处理</h3>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.BaseExecutor#query</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">query</span><span class="hljs-params">(MappedStatement ms, Object parameter, RowBounds rowBounds,
+                         ResultHandler resultHandler, CacheKey key, BoundSql boundSql)</span> <span class="hljs-keyword">throws</span> SQLException {
+    ErrorContext.instance().resource(ms.getResource()).activity(<span class="hljs-string">&quot;executing a query&quot;</span>).object(ms.getId());
+    <span class="hljs-keyword">if</span> (closed) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ExecutorException</span>(<span class="hljs-string">&quot;Executor was closed.&quot;</span>);
+    }
+    <span class="hljs-keyword">if</span> (queryStack == <span class="hljs-number">0</span> &amp;&amp; ms.isFlushCacheRequired()) {
+        clearLocalCache();
+    }
+    List&lt;E&gt; list;
+    <span class="hljs-keyword">try</span> {
+        queryStack++;
+        <span class="hljs-comment">// 先查缓存</span>
+        list = resultHandler == <span class="hljs-literal">null</span> ? (List&lt;E&gt;) localCache.getObject(key) : <span class="hljs-literal">null</span>;
+        <span class="hljs-keyword">if</span> (list != <span class="hljs-literal">null</span>) {
+            <span class="hljs-comment">// 存储过程返回值缓存的位置不同，需要单独处理</span>
+            handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-comment">// 查库</span>
+            list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
+        }
+    } <span class="hljs-keyword">finally</span> {
+        queryStack--;
+    }
+    <span class="hljs-keyword">if</span> (queryStack == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">for</span> (DeferredLoad deferredLoad : deferredLoads) {
+            deferredLoad.load();
+        }
+        <span class="hljs-comment">// issue #601</span>
+        deferredLoads.clear();
+        <span class="hljs-keyword">if</span> (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) {
+            <span class="hljs-comment">// issue #482</span>
+            clearLocalCache();
+        }
+    }
+    <span class="hljs-keyword">return</span> list;
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="查库"><a class="anchor" href="#查库"></a>查库</h3>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.BaseExecutor#queryFromDatabase</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">private</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">queryFromDatabase</span><span class="hljs-params">(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql)</span> <span class="hljs-keyword">throws</span> SQLException {
+    List&lt;E&gt; list;
+    localCache.putObject(key, EXECUTION_PLACEHOLDER);
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// 真正的查询逻辑在子类</span>
+        list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
+    } <span class="hljs-keyword">finally</span> {
+        localCache.removeObject(key);
+    }
+    localCache.putObject(key, list);
+    <span class="hljs-keyword">if</span> (ms.getStatementType() == StatementType.CALLABLE) {
+        localOutputParameterCache.putObject(key, parameter);
+    }
+    <span class="hljs-keyword">return</span> list;
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.SimpleExecutor#doQuery</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">doQuery</span><span class="hljs-params">(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler , BoundSql boundSql)</span> <span class="hljs-keyword">throws</span> SQLException {
+    <span class="hljs-type">Statement</span> <span class="hljs-variable">stmt</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-type">Configuration</span> <span class="hljs-variable">configuration</span> <span class="hljs-operator">=</span> ms.getConfiguration();
+        <span class="hljs-comment">// 从 Configuration 中获取 StatementHandler</span>
+        <span class="hljs-type">StatementHandler</span> <span class="hljs-variable">handler</span> <span class="hljs-operator">=</span> configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+        stmt = prepareStatement(handler, ms.getStatementLog());
+        <span class="hljs-keyword">return</span> handler.query(stmt, resultHandler);
+    } <span class="hljs-keyword">finally</span> {
+        closeStatement(stmt);
+    }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="parameterhandler"><a class="anchor" href="#parameterhandler"></a>ParameterHandler</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To Be Continued.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="statementhandler"><a class="anchor" href="#statementhandler"></a>StatementHandler</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="创建-statementhandler"><a class="anchor" href="#创建-statementhandler"></a>创建 <code>StatementHandler</code></h3>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.session.Configuration#newStatementHandler</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> StatementHandler <span class="hljs-title function_">newStatementHandler</span><span class="hljs-params">(Executor executor, MappedStatement mappedStatement,
+                                            Object parameterObject, RowBounds rowBounds,
+                                            ResultHandler resultHandler, BoundSql boundSql)</span> {
+    <span class="hljs-comment">// TODO 策略模式</span>
+    <span class="hljs-comment">// 根据 MappedStatement.statementType 返回不同的 StatementHandler</span>
+    <span class="hljs-type">StatementHandler</span> <span class="hljs-variable">statementHandler</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RoutingStatementHandler</span>(executor, mappedStatement, parameterObject,
+        rowBounds, resultHandler, boundSql);
+    <span class="hljs-comment">// 应用插件</span>
+    statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
+    <span class="hljs-keyword">return</span> statementHandler;
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.statement.RoutingStatementHandler#RoutingStatementHandler</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-title function_">RoutingStatementHandler</span><span class="hljs-params">(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> {
+
+  <span class="hljs-keyword">switch</span> (ms.getStatementType()) {
+    <span class="hljs-keyword">case</span> STATEMENT: <i class="conum" data-value="1"></i><b>(1)</b>
+      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">case</span> PREPARED: <i class="conum" data-value="2"></i><b>(2)</b>
+      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">PreparedStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">case</span> CALLABLE: <i class="conum" data-value="3"></i><b>(3)</b>
+      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">CallableStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+      <span class="hljs-keyword">break</span>;
+    <span class="hljs-keyword">default</span>:
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ExecutorException</span>(<span class="hljs-string">&quot;Unknown statement type: &quot;</span> + ms.getStatementType());
+  }
+
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>可直接操作的 <code>SQL</code> ，对应 <code>JDBC</code> 的 <code>Statement</code></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>预处理处理器 ，对应 <code>JDBC</code> 的 <code>PreparedStatement</code></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>存储过程处理器 ，对应 <code>JDBC</code> 的 <code>CallableStatement</code></td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="执行-sql"><a class="anchor" href="#执行-sql"></a>执行 <code>SQL</code></h3>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.statement.SimpleStatementHandler#query</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">query</span><span class="hljs-params">(Statement statement, ResultHandler resultHandler)</span> <span class="hljs-keyword">throws</span> SQLException {
+    <span class="hljs-type">String</span> <span class="hljs-variable">sql</span> <span class="hljs-operator">=</span> boundSql.getSql();
+    statement.execute(sql);
+    <span class="hljs-keyword">return</span> resultSetHandler.handleResultSets(statement);
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="resultsethandler"><a class="anchor" href="#resultsethandler"></a>ResultSetHandler</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>To Be Continued.</p>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="mybatis-init.html">MyBatis 初始化流程</a></span>
+  <span class="next"><a href="mybatis-plugin.html">MyBatis 插件</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Last updated on 2023-05-31 06:05:54</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+  </body>
+</html>

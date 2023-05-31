@@ -1,0 +1,56 @@
+@startuml
+skinparam componentStyle rectangle
+
+frame Core {
+[Executor]
+[StatementHandler]
+[ParameterHandler]
+[ResultSetHandler]
+[TypeHandler]
+}
+frame [JDBC] {
+[Statement]
+[ResultSet]
+}
+database [MySql] {
+}
+
+[SqlSession] --> [Executor]
+[SqlSession] <-- [Executor]
+[Executor] --> [StatementHandler]
+[Executor] <-- [StatementHandler]
+[StatementHandler] --> [ParameterHandler]
+[StatementHandler] <-- [ResultSetHandler]
+[ParameterHandler] --> [TypeHandler]
+[ResultSetHandler] <-- [TypeHandler]
+[TypeHandler] --> [Statement]
+[Statement] --> [MySql]
+[MySql] --> [ResultSet]
+[ResultSet] --> [TypeHandler]
+@enduml
+
+@startuml
+skinparam componentStyle rectangle
+
+frame 接口层 {
+[SqlSession]
+[Mapper]
+[SqlSessionFactory]
+}
+frame 核心处理层 {
+[配置解析]
+[参数映射]
+[SQL解析]
+[SQL执行]
+[结果集映射]
+[插件]
+}
+frame 基础支持层 {
+[类型转换]
+[日志模块]
+[资源加载]
+[数据源]
+[缓存]
+[反射工具]
+}
+@enduml

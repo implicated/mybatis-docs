@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Spring 整合 MyBatis 原理 :: Implicated</title>
+    <link rel="canonical" href="https://docs.implicated.com/mybatis/mybatis-spring/mybatis-spring-integrations.html">
+    <link rel="prev" href="../mybatis/mybatis-plugin.html">
+    <meta name="generator" content="Antora 3.1.3">
+    <link rel="stylesheet" href="../../_/css/site.css">
+    <script>var uiRootPath = '../../_'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://docs.implicated.com">Implicated</a>
+      <div class="navbar-item search hide-for-print">
+        <div id="search-field" class="field">
+          <input id="search-input" type="text" placeholder="Search the docs">
+        </div>
+      </div>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="mybatis" data-version="">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="../index.html">Learn MyBatis</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="../introduction.html">基本介绍</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">MyBatis</span>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../mybatis/mybatis-component.html">MyBatis 的组成</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../mybatis/mybatis-init.html">MyBatis 初始化流程</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../mybatis/mybatis-sql.html">MyBatis 执行流程</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="../mybatis/mybatis-plugin.html">MyBatis 插件</a>
+  </li>
+</ul>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <button class="nav-item-toggle"></button>
+    <span class="nav-text">MyBatis Spring</span>
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="2">
+    <a class="nav-link" href="mybatis-spring-integrations.html">Spring 整合 MyBatis 原理</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="../index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="../index.html">Learn MyBatis</a></li>
+    <li>MyBatis Spring</li>
+    <li><a href="mybatis-spring-integrations.html">Spring 整合 MyBatis 原理</a></li>
+  </ul>
+</nav>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Spring 整合 MyBatis 原理</h1>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>基本流程：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>使用 <code>MapperScannerRegistrar</code> 扫包并</p>
+<div class="ulist">
+<ul>
+<li>
+<p>根据 <code>MapperScan</code> 信息，注入一个 <code>MapperScannerConfigurer</code></p>
+</li>
+<li>
+<p>在 <code>Mapper</code> 的 <code>BeanDefinition</code> 加载后，实例化之前修改注入类型为 <code>MapperFactoryBean</code> 。</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>使用 <code>MapperFactoryBean</code> 为每个 <code>Mapper</code> 接口生成 <code>JDK</code> 的动态代理 <code>MapperProxy</code> 。</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>核心类：</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+<col style="width: 25%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">MapperScannerConfigurer</th>
+<th class="tableblock halign-left valign-top">MapperFactoryBean</th>
+<th class="tableblock halign-left valign-top">SqlSessionTemplate</th>
+<th class="tableblock halign-left valign-top">SqlSessionFactoryBean</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="imageblock">
+<div class="content">
+<img src="../_images/mapper-scanner-configurer.png" alt="mapper scanner configurer">
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="imageblock">
+<div class="content">
+<img src="../_images/mapper-factory-bean.png" alt="mapper factory bean">
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="imageblock">
+<div class="content">
+<img src="../_images/sql-session-template.png" alt="sql session template">
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="imageblock">
+<div class="content">
+<img src="../_images/sql-session-factory-bean.png" alt="sql session factory bean">
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect1">
+<h2 id="时序图"><a class="anchor" href="#时序图"></a>时序图</h2>
+<div class="sectionbody">
+<div class="imageblock kroki">
+<div class="content">
+<img src="../_images/diag-12f6a9daf8e867f2ea20889824f5575480cbf721.svg" alt="Diagram">
+</div>
+</div>
+<div class="imageblock kroki">
+<div class="content">
+<img src="../_images/diag-e7b3145721a80c1ac3d1f31c20a368341c4b97d2.svg" alt="Diagram">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="入口"><a class="anchor" href="#入口"></a>入口</h2>
+<div class="sectionbody">
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title"><code>org.mybatis.spring.annotation.MapperScan</code></div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(ElementType.TYPE)</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Import(MapperScannerRegistrar.class)</span> <i class="conum" data-value="1"></i><b>(1)</b>
+<span class="hljs-meta">@Repeatable(MapperScans.class)</span> <i class="conum" data-value="2"></i><b>(2)</b>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> MapperScan {
+   <span class="hljs-comment">// ...</span>
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title"><code>org.mybatis.spring.annotation.MapperScans</code></div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-meta">@Retention(RetentionPolicy.RUNTIME)</span>
+<span class="hljs-meta">@Target(ElementType.TYPE)</span>
+<span class="hljs-meta">@Documented</span>
+<span class="hljs-meta">@Import(MapperScannerRegistrar.RepeatingRegistrar.class)</span> <i class="conum" data-value="3"></i><b>(3)</b>
+<span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> MapperScans {
+   <span class="hljs-comment">// ...</span>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>导入 <code>Mapper</code> 扫描注入器</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>重复标注会生成 <code>MapperScans</code> 注解</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>导入批量的 <code>Mapper</code> 扫描注入器</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="listingblock">
+<div class="title">org.mybatis.spring.annotation.MapperScannerRegistrar.RepeatingRegistrar#registerBeanDefinitions</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">registerBeanDefinitions</span><span class="hljs-params">(AnnotationMetadata importingClassMetadata,
+                                    BeanDefinitionRegistry registry)</span> {
+    <span class="hljs-type">AnnotationAttributes</span> <span class="hljs-variable">mapperScansAttrs</span> <span class="hljs-operator">=</span> AnnotationAttributes
+        .fromMap(importingClassMetadata.getAnnotationAttributes(MapperScans.class.getName()));
+    <span class="hljs-keyword">if</span> (mapperScansAttrs != <span class="hljs-literal">null</span>) {
+        AnnotationAttributes[] annotations = mapperScansAttrs.getAnnotationArray(<span class="hljs-string">&quot;value&quot;</span>);
+        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> <span class="hljs-variable">i</span> <span class="hljs-operator">=</span> <span class="hljs-number">0</span>; i &lt; annotations.length; i++) {
+            <span class="hljs-comment">// 遍历注入，和 MapperScan 一样</span>
+            registerBeanDefinitions(importingClassMetadata, annotations[i], registry,
+                generateBaseBeanName(importingClassMetadata, i));
+        }
+    }
+}</code></pre>
+</div>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="mapper-注入器"><a class="anchor" href="#mapper-注入器"></a><code>Mapper</code> 注入器</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="title">org.mybatis.spring.annotation.MapperScannerRegistrar#registerBeanDefinitions</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">registerBeanDefinitions</span><span class="hljs-params">(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)</span> {
+    <span class="hljs-type">AnnotationAttributes</span> <span class="hljs-variable">mapperScanAttrs</span> <span class="hljs-operator">=</span> AnnotationAttributes
+        .fromMap(importingClassMetadata.getAnnotationAttributes(MapperScan.class.getName()));
+    <span class="hljs-keyword">if</span> (mapperScanAttrs != <span class="hljs-literal">null</span>) {
+        registerBeanDefinitions(importingClassMetadata, mapperScanAttrs, registry,
+            generateBaseBeanName(importingClassMetadata, <span class="hljs-number">0</span>));
+    }
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>解析 MapperScan 注解的属性，注入 <code>MapperScannerConfigurer</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">void</span> <span class="hljs-title function_">registerBeanDefinitions</span><span class="hljs-params">(AnnotationMetadata annoMeta, AnnotationAttributes annoAttrs,
+                             BeanDefinitionRegistry registry, String beanName)</span> {
+
+    <span class="hljs-type">BeanDefinitionBuilder</span> <span class="hljs-variable">builder</span> <span class="hljs-operator">=</span> BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer.class);
+    builder.addPropertyValue(<span class="hljs-string">&quot;processPropertyPlaceHolders&quot;</span>, <span class="hljs-literal">true</span>);
+
+    <span class="hljs-comment">// annoAttrs MapperScan 注解属性</span>
+    Class&lt;? <span class="hljs-keyword">extends</span> <span class="hljs-title class_">Annotation</span>&gt; annotationClass = annoAttrs.getClass(<span class="hljs-string">&quot;annotationClass&quot;</span>);
+    <span class="hljs-keyword">if</span> (!Annotation.class.equals(annotationClass)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;annotationClass&quot;</span>, annotationClass);
+    }
+
+    Class&lt;?&gt; markerInterface = annoAttrs.getClass(<span class="hljs-string">&quot;markerInterface&quot;</span>);
+    <span class="hljs-keyword">if</span> (!Class.class.equals(markerInterface)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;markerInterface&quot;</span>, markerInterface);
+    }
+
+    Class&lt;? <span class="hljs-keyword">extends</span> <span class="hljs-title class_">BeanNameGenerator</span>&gt; generatorClass = annoAttrs.getClass(<span class="hljs-string">&quot;nameGenerator&quot;</span>);
+    <span class="hljs-keyword">if</span> (!BeanNameGenerator.class.equals(generatorClass)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;nameGenerator&quot;</span>, BeanUtils.instantiateClass(generatorClass));
+    }
+
+    Class&lt;? <span class="hljs-keyword">extends</span> <span class="hljs-title class_">MapperFactoryBean</span>&gt; mapperFactoryBeanClass = annoAttrs.getClass(<span class="hljs-string">&quot;factoryBean&quot;</span>);
+    <span class="hljs-keyword">if</span> (!MapperFactoryBean.class.equals(mapperFactoryBeanClass)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;mapperFactoryBeanClass&quot;</span>, mapperFactoryBeanClass);
+    }
+
+    <span class="hljs-type">String</span> <span class="hljs-variable">sqlSessionTemplateRef</span> <span class="hljs-operator">=</span> annoAttrs.getString(<span class="hljs-string">&quot;sqlSessionTemplateRef&quot;</span>);
+    <span class="hljs-keyword">if</span> (StringUtils.hasText(sqlSessionTemplateRef)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;sqlSessionTemplateBeanName&quot;</span>, annoAttrs.getString(<span class="hljs-string">&quot;sqlSessionTemplateRef&quot;</span>));
+    }
+
+    <span class="hljs-type">String</span> <span class="hljs-variable">sqlSessionFactoryRef</span> <span class="hljs-operator">=</span> annoAttrs.getString(<span class="hljs-string">&quot;sqlSessionFactoryRef&quot;</span>);
+    <span class="hljs-keyword">if</span> (StringUtils.hasText(sqlSessionFactoryRef)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;sqlSessionFactoryBeanName&quot;</span>, annoAttrs.getString(<span class="hljs-string">&quot;sqlSessionFactoryRef&quot;</span>));
+    }
+
+    List&lt;String&gt; basePackages = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ArrayList</span>&lt;&gt;();
+    basePackages.addAll(
+        Arrays.stream(annoAttrs.getStringArray(<span class="hljs-string">&quot;value&quot;</span>)).filter(StringUtils::hasText).collect(Collectors.toList()));
+
+    basePackages.addAll(Arrays.stream(annoAttrs.getStringArray(<span class="hljs-string">&quot;basePackages&quot;</span>)).filter(StringUtils::hasText)
+        .collect(Collectors.toList()));
+
+    basePackages.addAll(Arrays.stream(annoAttrs.getClassArray(<span class="hljs-string">&quot;basePackageClasses&quot;</span>)).map(ClassUtils::getPackageName)
+        .collect(Collectors.toList()));
+
+    <span class="hljs-comment">// 未配置，使用 MapperScans 所在包</span>
+    <span class="hljs-keyword">if</span> (basePackages.isEmpty()) {
+        basePackages.add(getDefaultBasePackage(annoMeta));
+    }
+
+    <span class="hljs-type">String</span> <span class="hljs-variable">lazyInitialization</span> <span class="hljs-operator">=</span> annoAttrs.getString(<span class="hljs-string">&quot;lazyInitialization&quot;</span>);
+    <span class="hljs-keyword">if</span> (StringUtils.hasText(lazyInitialization)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;lazyInitialization&quot;</span>, lazyInitialization);
+    }
+
+    <span class="hljs-type">String</span> <span class="hljs-variable">defaultScope</span> <span class="hljs-operator">=</span> annoAttrs.getString(<span class="hljs-string">&quot;defaultScope&quot;</span>);
+    <span class="hljs-keyword">if</span> (!AbstractBeanDefinition.SCOPE_DEFAULT.equals(defaultScope)) {
+        builder.addPropertyValue(<span class="hljs-string">&quot;defaultScope&quot;</span>, defaultScope);
+    }
+
+    <span class="hljs-comment">// , 拼接字符串</span>
+    builder.addPropertyValue(<span class="hljs-string">&quot;basePackage&quot;</span>, StringUtils.collectionToCommaDelimitedString(basePackages));
+
+    <span class="hljs-comment">// beanName is `cc.implicated.demo.MybatisDemoApplication#MapperScannerRegistrar#0`</span>
+    registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
+
+}</code></pre>
+</div>
+</div>
+<div class="sect2">
+<h3 id="注入-mapper-接口"><a class="anchor" href="#注入-mapper-接口"></a>注入 <code>Mapper</code> 接口</h3>
+<div class="paragraph">
+<p><code>MapperScannerConfigurer</code> 实现了 <code>BeanDefinitionRegistryPostProcessor</code> 接口，会在 <code>BeanDefinition</code> 加载后，实例化之前执行 <code>postProcessBeanDefinitionRegistry</code> 方法。</p>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">org.mybatis.spring.mapper.MapperScannerConfigurer#postProcessBeanDefinitionRegistry</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">postProcessBeanDefinitionRegistry</span><span class="hljs-params">(BeanDefinitionRegistry registry)</span> {
+    <span class="hljs-comment">// 后置处理器 在 BeanDefinition 加载后，实例化之前执行</span>
+
+    <span class="hljs-comment">// 解析 MapperScan 属性中的占位符，默认 true</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.processPropertyPlaceHolders) {
+        processPropertyPlaceHolders();
+    }
+
+    <span class="hljs-comment">// mapper 扫描器</span>
+    <span class="hljs-type">ClassPathMapperScanner</span> <span class="hljs-variable">scanner</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ClassPathMapperScanner</span>(registry);
+    <span class="hljs-comment">// 是否要将 Mapper 接口添加到 Configuration 全局配置对象中</span>
+    scanner.setAddToConfig(<span class="hljs-built_in">this</span>.addToConfig);
+    <span class="hljs-comment">// 设置 MapperScan 中的属性</span>
+    scanner.setAnnotationClass(<span class="hljs-built_in">this</span>.annotationClass);
+    scanner.setMarkerInterface(<span class="hljs-built_in">this</span>.markerInterface);
+    scanner.setSqlSessionFactory(<span class="hljs-built_in">this</span>.sqlSessionFactory);
+    scanner.setSqlSessionTemplate(<span class="hljs-built_in">this</span>.sqlSessionTemplate);
+    scanner.setSqlSessionFactoryBeanName(<span class="hljs-built_in">this</span>.sqlSessionFactoryBeanName);
+    scanner.setSqlSessionTemplateBeanName(<span class="hljs-built_in">this</span>.sqlSessionTemplateBeanName);
+    scanner.setResourceLoader(<span class="hljs-built_in">this</span>.applicationContext);
+    scanner.setBeanNameGenerator(<span class="hljs-built_in">this</span>.nameGenerator);
+    scanner.setMapperFactoryBeanClass(<span class="hljs-built_in">this</span>.mapperFactoryBeanClass);
+    <span class="hljs-keyword">if</span> (StringUtils.hasText(lazyInitialization)) {
+        scanner.setLazyInitialization(Boolean.valueOf(lazyInitialization));
+    }
+    <span class="hljs-keyword">if</span> (StringUtils.hasText(defaultScope)) {
+        scanner.setDefaultScope(defaultScope);
+    }
+    <span class="hljs-comment">// 添加扫描过滤器</span>
+    scanner.registerFilters();
+    <span class="hljs-comment">// 扫描 and 加载 bean definition</span>
+    scanner.scan(
+        StringUtils.tokenizeToStringArray(<span class="hljs-built_in">this</span>.basePackage,
+            ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="修改加载的-beandefinition"><a class="anchor" href="#修改加载的-beandefinition"></a>修改加载的 <code>BeanDefinition</code></h3>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.mapper.ClassPathMapperScanner#doScan</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> Set&lt;BeanDefinitionHolder&gt; <span class="hljs-title function_">doScan</span><span class="hljs-params">(String... basePackages)</span> {
+    <span class="hljs-comment">// 调用父类的doScan方法，扫描并加载 bean</span>
+    Set&lt;BeanDefinitionHolder&gt; beanDefinitions = <span class="hljs-built_in">super</span>.doScan(basePackages);
+
+    <span class="hljs-keyword">if</span> (beanDefinitions.isEmpty()) {
+        LOGGER.warn(() -&gt; <span class="hljs-string">&quot;No MyBatis mapper was found in &#x27;&quot;</span> + Arrays.toString(basePackages)
+            + <span class="hljs-string">&quot;&#x27; package. Please check your configuration.&quot;</span>);
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-comment">// 修改加载的 Bean Definition</span>
+        processBeanDefinitions(beanDefinitions); <i class="conum" data-value="1"></i><b>(1)</b>
+    }
+
+    <span class="hljs-keyword">return</span> beanDefinitions;
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>核心处理逻辑
+<details>
+<summary class="title">处理前</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/bean-definition-before.png" alt="bean definition before">
+</div>
+</div>
+</div>
+</details>
+<details>
+<summary class="title">处理后</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/bean-definition-after.png" alt="bean definition after">
+</div>
+</div>
+</div>
+</details></td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.mapper.ClassPathMapperScanner#processBeanDefinitions</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">processBeanDefinitions</span><span class="hljs-params">(Set&lt;BeanDefinitionHolder&gt; beanDefinitions)</span> {
+    AbstractBeanDefinition definition;
+    <span class="hljs-type">BeanDefinitionRegistry</span> <span class="hljs-variable">registry</span> <span class="hljs-operator">=</span> getRegistry();
+    <span class="hljs-comment">// 修改全部的 BeanDefinition</span>
+    <span class="hljs-keyword">for</span> (BeanDefinitionHolder holder : beanDefinitions) {
+        definition = (AbstractBeanDefinition) holder.getBeanDefinition();
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">scopedProxy</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+
+        <span class="hljs-keyword">if</span> (ScopedProxyFactoryBean.class.getName().equals(definition.getBeanClassName())) {
+            definition =
+                (AbstractBeanDefinition) Optional.ofNullable(((RootBeanDefinition) definition).getDecoratedDefinition())
+                    .map(BeanDefinitionHolder::getBeanDefinition)
+                    .orElseThrow(() -&gt;
+                        <span class="hljs-keyword">new</span> <span class="hljs-title class_">IllegalStateException</span>(<span class="hljs-string">&quot;The target bean definition of scoped proxy bean not found. &quot;</span> +
+                            <span class="hljs-string">&quot;Root bean definition[&quot;</span> + holder + <span class="hljs-string">&quot;]&quot;</span>));
+            scopedProxy = <span class="hljs-literal">true</span>;
+        }
+
+        <span class="hljs-comment">// 获取原类型</span>
+        <span class="hljs-type">String</span> <span class="hljs-variable">beanClassName</span> <span class="hljs-operator">=</span> definition.getBeanClassName();
+        LOGGER.debug(() -&gt;
+            <span class="hljs-string">&quot;Creating MapperFactoryBean with name &#x27;&quot;</span> + holder.getBeanName() + <span class="hljs-string">&quot;&#x27; and &#x27;&quot;</span> + beanClassName + <span class="hljs-string">&quot;&#x27; &quot;</span> +
+                <span class="hljs-string">&quot;mapperInterface&quot;</span>);
+
+        <span class="hljs-comment">// 设置 MapperFactoryBean&lt;T&gt; 构造器参数 mapperInterface，指定泛型</span>
+        <span class="hljs-comment">// the mapper interface is the original class of the bean</span>
+        <span class="hljs-comment">// but, the actual class of the bean is MapperFactoryBean</span>
+        definition.getConstructorArgumentValues().addGenericArgumentValue(beanClassName); <span class="hljs-comment">// issue #59</span>
+
+        <span class="hljs-comment">// 修改 beanClass 为 org.mybatis.spring.mapper.MapperFactoryBean</span>
+        definition.setBeanClass(<span class="hljs-built_in">this</span>.mapperFactoryBeanClass); <i class="conum" data-value="1"></i><b>(1)</b>
+
+        <span class="hljs-comment">// 是否要将接口添加到 Configuration 全局配置对象中，默认为 True</span>
+        definition.getPropertyValues().add(<span class="hljs-string">&quot;addToConfig&quot;</span>, <span class="hljs-built_in">this</span>.addToConfig);
+
+        <span class="hljs-comment">// Attribute for MockitoPostProcessor</span>
+        <span class="hljs-comment">// https://github.com/mybatis/spring-boot-starter/issues/475</span>
+        definition.setAttribute(FACTORY_BEAN_OBJECT_TYPE, beanClassName);
+
+        <span class="hljs-comment">// 是否指定了 SqlSessionFactory</span>
+        <span class="hljs-type">boolean</span> <span class="hljs-variable">explicitFactoryUsed</span> <span class="hljs-operator">=</span> <span class="hljs-literal">false</span>;
+
+        <span class="hljs-comment">// 添加 sqlSessionFactory</span>
+        <span class="hljs-comment">// SqlSessionDaoSupport.setSqlSessionFactory()</span>
+        <span class="hljs-keyword">if</span> (StringUtils.hasText(<span class="hljs-built_in">this</span>.sqlSessionFactoryBeanName)) {
+            definition.getPropertyValues()
+                .add(<span class="hljs-string">&quot;sqlSessionFactory&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeBeanReference</span>(<span class="hljs-built_in">this</span>.sqlSessionFactoryBeanName));
+            explicitFactoryUsed = <span class="hljs-literal">true</span>;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.sqlSessionFactory != <span class="hljs-literal">null</span>) {
+            definition.getPropertyValues()
+                .add(<span class="hljs-string">&quot;sqlSessionFactory&quot;</span>, <span class="hljs-built_in">this</span>.sqlSessionFactory);
+            explicitFactoryUsed = <span class="hljs-literal">true</span>;
+        }
+
+        <span class="hljs-comment">// 添加 sqlSessionTemplate</span>
+        <span class="hljs-keyword">if</span> (StringUtils.hasText(<span class="hljs-built_in">this</span>.sqlSessionTemplateBeanName)) {
+            <span class="hljs-comment">// sqlSessionTemplate 覆盖 sqlSessionFactory</span>
+            <span class="hljs-keyword">if</span> (explicitFactoryUsed) {
+                LOGGER.warn(() -&gt; <span class="hljs-string">&quot;Cannot use both: sqlSessionTemplate and sqlSessionFactory together. &quot;</span> +
+                    <span class="hljs-string">&quot;sqlSessionFactory is ignored.&quot;</span>);
+            }
+            definition.getPropertyValues()
+                .add(<span class="hljs-string">&quot;sqlSessionTemplate&quot;</span>, <span class="hljs-keyword">new</span> <span class="hljs-title class_">RuntimeBeanReference</span>(<span class="hljs-built_in">this</span>.sqlSessionTemplateBeanName));
+            explicitFactoryUsed = <span class="hljs-literal">true</span>;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.sqlSessionTemplate != <span class="hljs-literal">null</span>) {
+            <span class="hljs-keyword">if</span> (explicitFactoryUsed) {
+                LOGGER.warn(() -&gt; <span class="hljs-string">&quot;Cannot use both: sqlSessionTemplate and sqlSessionFactory together. &quot;</span> +
+                    <span class="hljs-string">&quot;sqlSessionFactory is ignored.&quot;</span>);
+            }
+            definition.getPropertyValues()
+                .add(<span class="hljs-string">&quot;sqlSessionTemplate&quot;</span>, <span class="hljs-built_in">this</span>.sqlSessionTemplate);
+            explicitFactoryUsed = <span class="hljs-literal">true</span>;
+        }
+
+        <span class="hljs-comment">// 上面没有找到对应的 SqlSessionFactory 或者 sqlSessionTemplate，则指定 mapper 通过类型注入</span>
+        <span class="hljs-comment">// 注入方式 by type （全局唯一）</span>
+        <span class="hljs-keyword">if</span> (!explicitFactoryUsed) {
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Enabling autowire by type for MapperFactoryBean with name &#x27;&quot;</span> + holder.getBeanName() + <span class="hljs-string">&quot;&#x27;.&quot;</span>);
+            definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        }
+
+        definition.setLazyInit(lazyInitialization);
+
+        <span class="hljs-keyword">if</span> (scopedProxy) {
+            <span class="hljs-keyword">continue</span>;
+        }
+
+        <span class="hljs-keyword">if</span> (ConfigurableBeanFactory.SCOPE_SINGLETON.equals(definition.getScope()) &amp;&amp; defaultScope != <span class="hljs-literal">null</span>) {
+            definition.setScope(defaultScope);
+        }
+
+        <span class="hljs-comment">// 非单例</span>
+        <span class="hljs-keyword">if</span> (!definition.isSingleton()) {
+            <span class="hljs-type">BeanDefinitionHolder</span> <span class="hljs-variable">proxyHolder</span> <span class="hljs-operator">=</span> ScopedProxyUtils.createScopedProxy(holder, registry, <span class="hljs-literal">true</span>);
+            <span class="hljs-keyword">if</span> (registry.containsBeanDefinition(proxyHolder.getBeanName())) {
+                registry.removeBeanDefinition(proxyHolder.getBeanName());
+            }
+            registry.registerBeanDefinition(proxyHolder.getBeanName(), proxyHolder.getBeanDefinition());
+        }
+
+    }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>关键步骤，将 <code>Mapper</code> 接口注入到 <code>Spring</code> 容器中的类型修改 <code>MapperFactoryBean</code></td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="mapperfactorybean"><a class="anchor" href="#mapperfactorybean"></a><code>MapperFactoryBean</code></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>MapperFactoryBean</code> 实现了 <code>FactoryBean&lt;Object&gt;</code> 接口。</p>
+</div>
+<div class="paragraph">
+<p>在注册 <code>MapperFactoryBean</code> 时，会把 <code>getObject()</code> 方法返回的对象注入到 <code>Spring</code> 容器中。</p>
+</div>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.mapper.MapperFactoryBean#getObject</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> T <span class="hljs-title function_">getObject</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
+    <span class="hljs-comment">// 从 org.apache.ibatis.session.Configuration#mapperRegistry#knownMappers 中返回 MapperProxy代理对象</span>
+    <span class="hljs-keyword">return</span> getSqlSession().getMapper(<span class="hljs-built_in">this</span>.mapperInterface);
+}</code></pre>
+</div>
+</div>
+<div class="sect2">
+<h3 id="getsqlsession"><a class="anchor" href="#getsqlsession"></a><code>getSqlSession()</code></h3>
+<div class="openblock">
+<div class="content">
+<div class="listingblock">
+<div class="title">org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> SqlSession <span class="hljs-title function_">getSqlSession</span><span class="hljs-params">()</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>.sqlSessionTemplate; <i class="conum" data-value="1"></i><b>(1)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>返回一个 <code>SqlSession</code> 类型的对象 <code>SqlSessionTemplate</code></td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">org.springframework.cloud.openfeign.MapperFactoryBean#loadBalance</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setSqlSessionFactory</span><span class="hljs-params">(SqlSessionFactory sqlSessionFactory)</span> {
+    <span class="hljs-comment">// sqlSessionTemplate 覆盖 sqlSessionFactory</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.sqlSessionTemplate == <span class="hljs-literal">null</span> || sqlSessionFactory != <span class="hljs-built_in">this</span>.sqlSessionTemplate.getSqlSessionFactory()) {
+    <span class="hljs-built_in">this</span>.sqlSessionTemplate = createSqlSessionTemplate(sqlSessionFactory); <i class="conum" data-value="1"></i><b>(1)</b>
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>使用 <code>SqlSessionFactory</code> 初始化 <code>SqlSessionTemplate</code>
+<div class="listingblock">
+<div class="title">org.springframework.cloud.openfeign.MapperFactoryBean#get</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">protected</span> SqlSessionTemplate <span class="hljs-title function_">createSqlSessionTemplate</span><span class="hljs-params">(
+        SqlSessionFactory sqlSessionFactory)</span> {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">SqlSessionTemplate</span>(sqlSessionFactory);
+}</code></pre>
+</div>
+</div></td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="getmapper"><a class="anchor" href="#getmapper"></a><code>getMapper()</code></h3>
+<div class="paragraph">
+<p><code>getMapper</code> 方法中调用 <code>Configuration#getMapper()</code> 方法，最终得到返回的 <code>MapperProxy</code> 对象注入到 <code>SpringContext</code> 中。</p>
+</div>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.SqlSessionTemplate#getMapper</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;T&gt; T <span class="hljs-title function_">getMapper</span><span class="hljs-params">(Class&lt;T&gt; type)</span> {
+    <span class="hljs-keyword">return</span> getConfiguration().getMapper(type, <span class="hljs-built_in">this</span>);
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="sqlsessionfactorybean"><a class="anchor" href="#sqlsessionfactorybean"></a>SqlSessionFactoryBean</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><code>SqlSessionFactoryBean</code> 实现了 <code>FactoryBean&lt;Object&gt;</code> 接口和 <code>InitializingBean</code> 接口。</p>
+</div>
+<div class="sect2">
+<h3 id="初始化"><a class="anchor" href="#初始化"></a>初始化</h3>
+<div class="paragraph">
+<p><code>SqlSessionFactoryBean</code> 一般是手动注入，它内部持有了 <code>Mybatis</code> 的全局配置对象 <code>Configuration</code> 。</p>
+</div>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.SqlSessionFactoryBean#afterPropertiesSet</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">afterPropertiesSet</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
+    notNull(dataSource, <span class="hljs-string">&quot;Property &#x27;dataSource&#x27; is required&quot;</span>);
+    notNull(sqlSessionFactoryBuilder, <span class="hljs-string">&quot;Property &#x27;sqlSessionFactoryBuilder&#x27; is required&quot;</span>);
+    state((configuration == <span class="hljs-literal">null</span> &amp;&amp; configLocation == <span class="hljs-literal">null</span>) || !(configuration != <span class="hljs-literal">null</span> &amp;&amp; configLocation != <span class="hljs-literal">null</span>),
+        <span class="hljs-string">&quot;Property &#x27;configuration&#x27; and &#x27;configLocation&#x27; can not specified with together&quot;</span>);
+
+    <span class="hljs-built_in">this</span>.sqlSessionFactory = buildSqlSessionFactory(); <i class="conum" data-value="1"></i><b>(1)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>代替了 <code>org.apache.ibatis.session.SqlSessionFactoryBuilder#build</code> 方法。</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">org.mybatis.spring.SqlSessionFactoryBean#buildSqlSessionFactory</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">protected</span> SqlSessionFactory <span class="hljs-title function_">buildSqlSessionFactory</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
+
+    <span class="hljs-keyword">final</span> Configuration targetConfiguration;
+
+    <span class="hljs-type">XMLConfigBuilder</span> <span class="hljs-variable">xmlConfigBuilder</span> <span class="hljs-operator">=</span> <span class="hljs-literal">null</span>;
+    <span class="hljs-comment">// 加载 org.apache.ibatis.session.Configuration</span>
+    <span class="hljs-comment">// 1. 已存在 org.apache.ibatis.session.Configuration</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.configuration != <span class="hljs-literal">null</span>) {
+        targetConfiguration = <span class="hljs-built_in">this</span>.configuration;
+        <span class="hljs-keyword">if</span> (targetConfiguration.getVariables() == <span class="hljs-literal">null</span>) {
+            targetConfiguration.setVariables(<span class="hljs-built_in">this</span>.configurationProperties);
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.configurationProperties != <span class="hljs-literal">null</span>) {
+            targetConfiguration.getVariables().putAll(<span class="hljs-built_in">this</span>.configurationProperties);
+        }
+    }
+    <span class="hljs-comment">// 2. 配置了 mybatis-config.xml 配置文件</span>
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.configLocation != <span class="hljs-literal">null</span>) {
+        xmlConfigBuilder = <span class="hljs-keyword">new</span> <span class="hljs-title class_">XMLConfigBuilder</span>(<span class="hljs-built_in">this</span>.configLocation.getInputStream(), <span class="hljs-literal">null</span>,
+            <span class="hljs-built_in">this</span>.configurationProperties);
+        targetConfiguration = xmlConfigBuilder.getConfiguration();
+    }
+    <span class="hljs-comment">// 3. 都未指定，创建一个 Configuration 对象</span>
+    <span class="hljs-keyword">else</span> {
+        LOGGER.debug(
+            () -&gt; <span class="hljs-string">&quot;Property &#x27;configuration&#x27; or &#x27;configLocation&#x27; not specified, using default MyBatis &quot;</span> +
+                <span class="hljs-string">&quot;Configuration&quot;</span>);
+        targetConfiguration = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Configuration</span>();
+        Optional.ofNullable(<span class="hljs-built_in">this</span>.configurationProperties).ifPresent(targetConfiguration::setVariables);
+    }
+
+    <span class="hljs-comment">// 注册 ObjectFactory</span>
+    Optional.ofNullable(<span class="hljs-built_in">this</span>.objectFactory).ifPresent(targetConfiguration::setObjectFactory);
+    <span class="hljs-comment">// 注册 ObjectWrapperFactory</span>
+    Optional.ofNullable(<span class="hljs-built_in">this</span>.objectWrapperFactory).ifPresent(targetConfiguration::setObjectWrapperFactory);
+    <span class="hljs-comment">// 注册 VFS</span>
+    Optional.ofNullable(<span class="hljs-built_in">this</span>.vfs).ifPresent(targetConfiguration::setVfsImpl);
+
+    <span class="hljs-comment">// 类型别名</span>
+    <span class="hljs-comment">// 它只与XML配置相关，其存在只是为了减少完全限定类名的冗余键入</span>
+    <span class="hljs-keyword">if</span> (hasLength(<span class="hljs-built_in">this</span>.typeAliasesPackage)) {
+        scanClasses(<span class="hljs-built_in">this</span>.typeAliasesPackage, <span class="hljs-built_in">this</span>.typeAliasesSuperType).stream()
+            <span class="hljs-comment">// 过滤掉匿名类</span>
+            .filter(clazz -&gt; !clazz.isAnonymousClass())
+            <span class="hljs-comment">// 过滤接口</span>
+            .filter(clazz -&gt; !clazz.isInterface())
+            <span class="hljs-comment">// 过滤掉内部类</span>
+            .filter(clazz -&gt; !clazz.isMemberClass())
+            <span class="hljs-comment">// 注册别名</span>
+            .forEach(targetConfiguration.getTypeAliasRegistry()::registerAlias);
+    }
+    <span class="hljs-comment">// 单个类型别名</span>
+    <span class="hljs-keyword">if</span> (!isEmpty(<span class="hljs-built_in">this</span>.typeAliases)) {
+        Stream.of(<span class="hljs-built_in">this</span>.typeAliases).forEach(typeAlias -&gt; {
+            targetConfiguration.getTypeAliasRegistry().registerAlias(typeAlias);
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Registered type alias: &#x27;&quot;</span> + typeAlias + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+        });
+    }
+
+    <span class="hljs-comment">// 注册插件</span>
+    <span class="hljs-keyword">if</span> (!isEmpty(<span class="hljs-built_in">this</span>.plugins)) {
+        Stream.of(<span class="hljs-built_in">this</span>.plugins).forEach(plugin -&gt; {
+            targetConfiguration.addInterceptor(plugin);
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Registered plugin: &#x27;&quot;</span> + plugin + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+        });
+    }
+
+    <span class="hljs-comment">// 类型转换器</span>
+    <span class="hljs-comment">// JDBCType 与 JAVAType 互转</span>
+    <span class="hljs-keyword">if</span> (hasLength(<span class="hljs-built_in">this</span>.typeHandlersPackage)) {
+        scanClasses(<span class="hljs-built_in">this</span>.typeHandlersPackage, TypeHandler.class).stream().filter(clazz -&gt; !clazz.isAnonymousClass())
+            <span class="hljs-comment">// 过滤接口</span>
+            .filter(clazz -&gt; !clazz.isInterface())
+            <span class="hljs-comment">// 过滤抽象类</span>
+            .filter(clazz -&gt; !Modifier.isAbstract(clazz.getModifiers()))
+            <span class="hljs-comment">// 注册类型转换器</span>
+            .forEach(targetConfiguration.getTypeHandlerRegistry()::register);
+    }
+    <span class="hljs-comment">// 单个类型转换器</span>
+    <span class="hljs-keyword">if</span> (!isEmpty(<span class="hljs-built_in">this</span>.typeHandlers)) {
+        Stream.of(<span class="hljs-built_in">this</span>.typeHandlers).forEach(typeHandler -&gt; {
+            targetConfiguration.getTypeHandlerRegistry().register(typeHandler);
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Registered type handler: &#x27;&quot;</span> + typeHandler + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+        });
+    }
+
+    <span class="hljs-comment">// 枚举转换器</span>
+    targetConfiguration.setDefaultEnumTypeHandler(defaultEnumTypeHandler);
+
+    <span class="hljs-keyword">if</span> (!isEmpty(<span class="hljs-built_in">this</span>.scriptingLanguageDrivers)) {
+        Stream.of(<span class="hljs-built_in">this</span>.scriptingLanguageDrivers).forEach(languageDriver -&gt; {
+            targetConfiguration.getLanguageRegistry().register(languageDriver);
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Registered scripting language driver: &#x27;&quot;</span> + languageDriver + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+        });
+    }
+    Optional.ofNullable(<span class="hljs-built_in">this</span>.defaultScriptingLanguageDriver)
+        .ifPresent(targetConfiguration::setDefaultScriptingLanguage);
+
+    <span class="hljs-comment">// 数据库id</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.databaseIdProvider != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">try</span> {
+            targetConfiguration.setDatabaseId(<span class="hljs-built_in">this</span>.databaseIdProvider.getDatabaseId(<span class="hljs-built_in">this</span>.dataSource));
+        } <span class="hljs-keyword">catch</span> (SQLException e) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NestedIOException</span>(<span class="hljs-string">&quot;Failed getting a databaseId&quot;</span>, e);
+        }
+    }
+
+    <span class="hljs-comment">// 缓存</span>
+    Optional.ofNullable(<span class="hljs-built_in">this</span>.cache).ifPresent(targetConfiguration::addCache);
+
+    <span class="hljs-comment">// 如果不为空，解析 mybatis 配置</span>
+    <span class="hljs-keyword">if</span> (xmlConfigBuilder != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">try</span> {
+            xmlConfigBuilder.parse();
+            LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Parsed configuration file: &#x27;&quot;</span> + <span class="hljs-built_in">this</span>.configLocation + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+        } <span class="hljs-keyword">catch</span> (Exception ex) {
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NestedIOException</span>(<span class="hljs-string">&quot;Failed to parse config resource: &quot;</span> + <span class="hljs-built_in">this</span>.configLocation, ex);
+        } <span class="hljs-keyword">finally</span> {
+            ErrorContext.instance().reset();
+        }
+    }
+
+    <span class="hljs-comment">// 设置 MyBatis Environment</span>
+    <span class="hljs-comment">// MyBatis 支持多数据源，但每个 sqlSessionFactory 只能选择一个</span>
+    <span class="hljs-comment">// 多个数据源需要创建多个 SqlSessionFactory 实例</span>
+    targetConfiguration.setEnvironment(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Environment</span>(
+        <span class="hljs-comment">// id，默认为 SqlSessionFactoryBean</span>
+        <span class="hljs-built_in">this</span>.environment,
+        <span class="hljs-comment">// 事务管理器</span>
+        <span class="hljs-built_in">this</span>.transactionFactory == <span class="hljs-literal">null</span> ? <span class="hljs-keyword">new</span> <span class="hljs-title class_">SpringManagedTransactionFactory</span>() : <span class="hljs-built_in">this</span>.transactionFactory,
+        <span class="hljs-comment">// 数据源</span>
+        <span class="hljs-built_in">this</span>.dataSource));
+
+    <span class="hljs-comment">// 注册 mapper.java 和 mapper.xml 文件</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.mapperLocations != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.mapperLocations.length == <span class="hljs-number">0</span>) {
+            LOGGER.warn(() -&gt; <span class="hljs-string">&quot;Property &#x27;mapperLocations&#x27; was specified but matching resources are not found.&quot;</span>);
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-comment">// 遍历全部 mapper 接口</span>
+            <span class="hljs-keyword">for</span> (Resource mapperLocation : <span class="hljs-built_in">this</span>.mapperLocations) {
+                <span class="hljs-keyword">if</span> (mapperLocation == <span class="hljs-literal">null</span>) {
+                    <span class="hljs-keyword">continue</span>;
+                }
+                <span class="hljs-keyword">try</span> {
+                    <span class="hljs-type">XMLMapperBuilder</span> <span class="hljs-variable">xmlMapperBuilder</span> <span class="hljs-operator">=</span>
+                        <span class="hljs-keyword">new</span> <span class="hljs-title class_">XMLMapperBuilder</span>(mapperLocation.getInputStream(), targetConfiguration,
+                            mapperLocation.toString(), targetConfiguration.getSqlFragments());
+                    <span class="hljs-comment">// 解析 mapper.java 和 mapper.xml 文件</span>
+                    xmlMapperBuilder.parse();
+                } <span class="hljs-keyword">catch</span> (Exception e) {
+                    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NestedIOException</span>(<span class="hljs-string">&quot;Failed to parse mapping resource: &#x27;&quot;</span> + mapperLocation + <span class="hljs-string">&quot;&#x27;&quot;</span>, e);
+                } <span class="hljs-keyword">finally</span> {
+                    ErrorContext.instance().reset();
+                }
+                LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Parsed mapper file: &#x27;&quot;</span> + mapperLocation + <span class="hljs-string">&quot;&#x27;&quot;</span>);
+            }
+        }
+    } <span class="hljs-keyword">else</span> {
+        LOGGER.debug(() -&gt; <span class="hljs-string">&quot;Property &#x27;mapperLocations&#x27; was not specified.&quot;</span>);
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>.sqlSessionFactoryBuilder.build(targetConfiguration); <i class="conum" data-value="1"></i><b>(1)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>实际注入的是 <code>DefaultSqlSessionFactory</code> 。
+<div class="listingblock">
+<div class="title">org.apache.ibatis.session.SqlSessionFactoryBuilder#build</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> SqlSessionFactory <span class="hljs-title function_">build</span><span class="hljs-params">(Configuration config)</span> {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">DefaultSqlSessionFactory</span>(config);
+}</code></pre>
+</div>
+</div>
+<details>
+<summary class="title">Details</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/default-sql-session-factory.png" alt="default sql session factory">
+</div>
+</div>
+</div>
+</details></td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="注入-sqlsessionfactory"><a class="anchor" href="#注入-sqlsessionfactory"></a>注入 <code>SqlSessionFactory</code></h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> SqlSessionFactory <span class="hljs-title function_">getObject</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
+    <span class="hljs-comment">// 如果为空，则初始化</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">this</span>.sqlSessionFactory == <span class="hljs-literal">null</span>) {
+        afterPropertiesSet();
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-built_in">this</span>.sqlSessionFactory;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<nav class="pagination">
+  <span class="prev"><a href="../mybatis/mybatis-plugin.html">MyBatis 插件</a></span>
+</nav>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>Last updated on 2023-05-31 06:05:54</p>
+</footer>
+<script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
+<script async src="../../_/js/vendor/highlight.js"></script>
+<script src="../../_/js/vendor/lunr.js"></script>
+<script src="../../_/js/search-ui.js" id="search-ui-script" data-site-root-path="../.." data-snippet-length="100" data-stylesheet="../../_/css/search.css"></script>
+<script async src="../../search-index.js"></script>
+  </body>
+</html>
