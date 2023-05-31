@@ -95,6 +95,27 @@
 </aside>
 <article class="doc">
 <h1 class="page">MyBatis 初始化流程</h1>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#时序图">时序图</a></li>
+<li><a href="#解析-mybatis-config-xml">解析 <code>MyBatis-config.xml</code></a></li>
+<li><a href="#解析-mapper-xml">解析 <code>mapper.xml</code></a>
+<ul class="sectlevel2">
+<li><a href="#解析-mapper-标签">解析 <code>&lt;mapper&gt;</code> 标签</a></li>
+<li><a href="#解析-mapper-的子标签">解析 <code>&lt;mapper&gt;</code> 的子标签</a></li>
+<li><a href="#注册-mapper-接口">注册 <code>mapper</code> 接口</a></li>
+</ul>
+</li>
+<li><a href="#解析-sql">解析 <code>SQL</code></a>
+<ul class="sectlevel2">
+<li><a href="#解析过程">解析过程</a></li>
+<li><a href="#sqlsource"><code>SqlSource</code></a></li>
+<li><a href="#boundsql">BoundSql</a></li>
+</ul>
+</li>
+</ul>
+</div>
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
@@ -474,9 +495,10 @@
 </div>
 </div>
 <div class="paragraph">
-<p>具体的解析在 <code>XMLStatementBuilder#parseStatementNode</code> 方法中。 .org.apache.ibatis.builder.xml.XMLStatementBuilder#parseStatementNode</p>
+<p>具体的解析在 <code>XMLStatementBuilder#parseStatementNode</code> 方法中。</p>
 </div>
 <div class="listingblock">
+<div class="title">org.apache.ibatis.builder.xml.XMLStatementBuilder#parseStatementNode</div>
 <div class="content">
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">parseStatementNode</span><span class="hljs-params">()</span> {
     <span class="hljs-comment">// key</span>
@@ -828,7 +850,7 @@
 </main>
 </div>
 <footer class="footer">
-  <p>Last updated on 2023-05-31 07:29:49</p>
+  <p>Last updated on 2023-05-31 09:11:06</p>
 </footer>
 <script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
 <script async src="../../_/js/vendor/highlight.js"></script>

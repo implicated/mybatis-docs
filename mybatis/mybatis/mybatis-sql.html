@@ -529,8 +529,8 @@
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> StatementHandler <span class="hljs-title function_">newStatementHandler</span><span class="hljs-params">(Executor executor, MappedStatement mappedStatement,
                                             Object parameterObject, RowBounds rowBounds,
                                             ResultHandler resultHandler, BoundSql boundSql)</span> {
-    <span class="hljs-comment">// TODO 策略模式</span>
     <span class="hljs-comment">// 根据 MappedStatement.statementType 返回不同的 StatementHandler</span>
+    <span class="hljs-comment">// 创建 StatementHandler 时，会同时生成 ParameterHandler 和 ResultSetHandler 用于处理请求参数和结果集</span>
     <span class="hljs-type">StatementHandler</span> <span class="hljs-variable">statementHandler</span> <span class="hljs-operator">=</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">RoutingStatementHandler</span>(executor, mappedStatement, parameterObject,
         rowBounds, resultHandler, boundSql);
     <span class="hljs-comment">// 应用插件</span>
@@ -539,25 +539,27 @@
 }</code></pre>
 </div>
 </div>
+<div class="sect3">
+<h4 id="根据-mappedstatement-statementtype-路由不同的-mappedstatement"><a class="anchor" href="#根据-mappedstatement-statementtype-路由不同的-mappedstatement"></a>根据 <code>MappedStatement.statementType</code> 路由不同的 <code>MappedStatement</code></h4>
 <div class="listingblock">
 <div class="title">org.apache.ibatis.executor.statement.RoutingStatementHandler#RoutingStatementHandler</div>
 <div class="content">
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> <span class="hljs-title function_">RoutingStatementHandler</span><span class="hljs-params">(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> {
 
-  <span class="hljs-keyword">switch</span> (ms.getStatementType()) {
-    <span class="hljs-keyword">case</span> STATEMENT: <i class="conum" data-value="1"></i><b>(1)</b>
-      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-      <span class="hljs-keyword">break</span>;
-    <span class="hljs-keyword">case</span> PREPARED: <i class="conum" data-value="2"></i><b>(2)</b>
-      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">PreparedStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-      <span class="hljs-keyword">break</span>;
-    <span class="hljs-keyword">case</span> CALLABLE: <i class="conum" data-value="3"></i><b>(3)</b>
-      delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">CallableStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
-      <span class="hljs-keyword">break</span>;
-    <span class="hljs-keyword">default</span>:
-      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ExecutorException</span>(<span class="hljs-string">&quot;Unknown statement type: &quot;</span> + ms.getStatementType());
-  }
-
+    <span class="hljs-comment">// 不同的 StatementHandler 构造器方法统一都在 BaseStatementHandler</span>
+    <span class="hljs-keyword">switch</span> (ms.getStatementType()) {
+        <span class="hljs-keyword">case</span> STATEMENT: <i class="conum" data-value="1"></i><b>(1)</b>
+            delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">SimpleStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> PREPARED: <i class="conum" data-value="2"></i><b>(2)</b>
+            delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">PreparedStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> CALLABLE: <i class="conum" data-value="3"></i><b>(3)</b>
+            delegate = <span class="hljs-keyword">new</span> <span class="hljs-title class_">CallableStatementHandler</span>(executor, ms, parameter, rowBounds, resultHandler, boundSql);
+            <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">default</span>:
+            <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ExecutorException</span>(<span class="hljs-string">&quot;Unknown statement type: &quot;</span> + ms.getStatementType());
+    }
 }</code></pre>
 </div>
 </div>
@@ -578,6 +580,35 @@
 </table>
 </div>
 </div>
+<div class="sect3">
+<h4 id="统一构造方法"><a class="anchor" href="#统一构造方法"></a>统一构造方法</h4>
+<div class="listingblock">
+<div class="title">org.apache.ibatis.executor.statement.BaseStatementHandler#BaseStatementHandler</div>
+<div class="content">
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">protected</span> <span class="hljs-title function_">BaseStatementHandler</span><span class="hljs-params">(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql)</span> {
+    <span class="hljs-built_in">this</span>.configuration = mappedStatement.getConfiguration();
+    <span class="hljs-built_in">this</span>.executor = executor;
+    <span class="hljs-built_in">this</span>.mappedStatement = mappedStatement;
+    <span class="hljs-built_in">this</span>.rowBounds = rowBounds;
+
+    <span class="hljs-built_in">this</span>.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
+    <span class="hljs-built_in">this</span>.objectFactory = configuration.getObjectFactory();
+
+    <span class="hljs-keyword">if</span> (boundSql == <span class="hljs-literal">null</span>) {
+        generateKeys(parameterObject);
+        boundSql = mappedStatement.getBoundSql(parameterObject);
+    }
+
+    <span class="hljs-built_in">this</span>.boundSql = boundSql;
+
+    <span class="hljs-built_in">this</span>.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+    <span class="hljs-built_in">this</span>.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds,
+        parameterHandler, resultHandler, boundSql);
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
 <div class="sect2">
 <h3 id="执行-sql"><a class="anchor" href="#执行-sql"></a>执行 <code>SQL</code></h3>
 <div class="listingblock">
@@ -585,10 +616,22 @@
 <div class="content">
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;E&gt; List&lt;E&gt; <span class="hljs-title function_">query</span><span class="hljs-params">(Statement statement, ResultHandler resultHandler)</span> <span class="hljs-keyword">throws</span> SQLException {
     <span class="hljs-type">String</span> <span class="hljs-variable">sql</span> <span class="hljs-operator">=</span> boundSql.getSql();
-    statement.execute(sql);
-    <span class="hljs-keyword">return</span> resultSetHandler.handleResultSets(statement);
+    statement.execute(sql); <i class="conum" data-value="1"></i><b>(1)</b>
+    <span class="hljs-keyword">return</span> resultSetHandler.handleResultSets(statement); <i class="conum" data-value="2"></i><b>(2)</b>
 }</code></pre>
 </div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td><code>JDBC</code> 查询</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>处理结果集</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -610,7 +653,7 @@
 </main>
 </div>
 <footer class="footer">
-  <p>Last updated on 2023-05-31 07:29:49</p>
+  <p>Last updated on 2023-05-31 09:11:06</p>
 </footer>
 <script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
 <script async src="../../_/js/vendor/highlight.js"></script>
