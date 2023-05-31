@@ -581,9 +581,27 @@
 <div class="content">
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> T <span class="hljs-title function_">getObject</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> Exception {
     <span class="hljs-comment">// 从 org.apache.ibatis.session.Configuration#mapperRegistry#knownMappers 中返回 MapperProxy代理对象</span>
-    <span class="hljs-keyword">return</span> getSqlSession().getMapper(<span class="hljs-built_in">this</span>.mapperInterface);
+    <span class="hljs-keyword">return</span> getSqlSession().getMapper(<span class="hljs-built_in">this</span>.mapperInterface); <i class="conum" data-value="1"></i><b>(1)</b>
 }</code></pre>
 </div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>最终注入容器的是一个 <code>MapperProxy</code> 对象
+<details>
+<summary class="title">MapperProxy</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/mapper.png" alt="mapper">
+</div>
+</div>
+</div>
+</details></td>
+</tr>
+</table>
 </div>
 <div class="sect2">
 <h3 id="getsqlsession"><a class="anchor" href="#getsqlsession"></a><code>getSqlSession()</code></h3>
@@ -645,9 +663,27 @@
 <div class="title">org.mybatis.spring.SqlSessionTemplate#getMapper</div>
 <div class="content">
 <pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> &lt;T&gt; T <span class="hljs-title function_">getMapper</span><span class="hljs-params">(Class&lt;T&gt; type)</span> {
-    <span class="hljs-keyword">return</span> getConfiguration().getMapper(type, <span class="hljs-built_in">this</span>);
+    <span class="hljs-keyword">return</span> getConfiguration().getMapper(type, <span class="hljs-built_in">this</span>); <i class="conum" data-value="1"></i><b>(1)</b>
 }</code></pre>
 </div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>保存在 <code>Configuration</code> 全局对象中
+<details>
+<summary class="title">Configuration</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/configuration-object.png" alt="configuration object">
+</div>
+</div>
+</div>
+</details></td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -865,7 +901,7 @@
 </div>
 </div>
 <details>
-<summary class="title">Details</summary>
+<summary class="title">DefaultSqlSessionFactory</summary>
 <div class="content">
 <div class="imageblock">
 <div class="content">
@@ -903,7 +939,7 @@
 </main>
 </div>
 <footer class="footer">
-  <p>Last updated on 2023-05-31 06:05:54</p>
+  <p>Last updated on 2023-05-31 07:29:49</p>
 </footer>
 <script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
 <script async src="../../_/js/vendor/highlight.js"></script>

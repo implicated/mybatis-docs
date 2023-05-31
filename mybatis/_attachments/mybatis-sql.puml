@@ -1,6 +1,32 @@
 @startuml
 autonumber
 
-XML -> SqlSessionFactory
-SqlSessionFactory -> SqlSession
+?-> MapperProxy++ : 执行 Mapper 中的方法
+MapperProxy -> MapperProxy : invoke
+MapperProxy -> MapperMethodInvoker++ : cachedInvoker
+MapperMethodInvoker -> PlainMethodInvoker++ : invoke
+PlainMethodInvoker -> MapperMethod++ : execute
+MapperMethod -> DefaultSqlSession++ : insert\
+\nupdate\
+\ndelete\
+\nquery
+DefaultSqlSession -> MappedStatement++ : update\
+\nselectList
+MappedStatement -> BaseExecutor++ : query\
+\nupdate
+BaseExecutor -> SimpleExecutor++ : doUpdate\
+\ndoQuery
+SimpleExecutor -> SimpleStatementHandler++ : update\
+\nquery
+SimpleStatementHandler -> JDBC++
+return
+return
+return
+return
+return
+return
+return
+return
+return
+return
 @enduml

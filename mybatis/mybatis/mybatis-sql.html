@@ -100,7 +100,7 @@
 <div class="sectionbody">
 <div class="imageblock kroki">
 <div class="content">
-<img src="../_images/diag-88f6199ee198bdb35e0972625630f5413fcde777.svg" alt="Diagram">
+<img src="../_images/diag-bdf5ddd0f9247aec9f18cb62ed32f54d34aa1a9f.svg" alt="Diagram">
 </div>
 </div>
 </div>
@@ -193,11 +193,11 @@
 <div class="listingblock">
 <div class="title">org.apache.ibatis.binding.MapperMethod#execute</div>
 <div class="content">
-<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> Object <span class="hljs-title function_">execute</span><span class="hljs-params">(SqlSession sqlSession, Object[] args)</span> {
+<pre class="highlight nowrap"><code class="language-java" data-lang="java"><span class="hljs-keyword">public</span> Object <span class="hljs-title function_">execute</span><span class="hljs-params">(SqlSession sqlSession, Object[] args)</span> { <i class="conum" data-value="1"></i><b>(1)</b>
     Object result;
     <span class="hljs-keyword">switch</span> (command.getType()) {
+        <span class="hljs-comment">// sqlSession.insert()</span>
         <span class="hljs-keyword">case</span> INSERT: {
-            <span class="hljs-comment">// sqlSession.insert()</span>
             <span class="hljs-type">Object</span> <span class="hljs-variable">param</span> <span class="hljs-operator">=</span> method.convertArgsToSqlCommandParam(args);
             result = rowCountResult(sqlSession.insert(command.getName(), param));
             <span class="hljs-keyword">break</span>;
@@ -253,6 +253,24 @@
     <span class="hljs-keyword">return</span> result;
 }</code></pre>
 </div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>
+<details>
+<summary class="title">SqlSession</summary>
+<div class="content">
+<div class="imageblock">
+<div class="content">
+<img src="../_images/default-sql-session-object.png" alt="default sql session object">
+</div>
+</div>
+</div>
+</details></td>
+</tr>
+</table>
 </div>
 </div>
 </div>
@@ -592,7 +610,7 @@
 </main>
 </div>
 <footer class="footer">
-  <p>Last updated on 2023-05-31 06:05:54</p>
+  <p>Last updated on 2023-05-31 07:29:49</p>
 </footer>
 <script id="site-script" src="../../_/js/site.js" data-ui-root-path="../../_"></script>
 <script async src="../../_/js/vendor/highlight.js"></script>
