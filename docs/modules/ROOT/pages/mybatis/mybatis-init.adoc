@@ -5,6 +5,7 @@
 
 * 使用 `XMLConfigBuilder` 解析 `MyBatis` 主配置文件
 * 使用 `XMLMapperBuilder` 解析 `mapper.xml` 配置文件
+** `SQL` 方法保存在 `Configuration.mappedStatements`
 * 使用 `MapperRegistry` 注册 `mapper` 接口，为每个 `mapper` 接口生成一个 `MapperProxy` 代理对象
 * 最终执行代理类中的代理方法
 
@@ -26,31 +27,41 @@
 include::attachment$mybatis-init.puml[]
 ----
 
+== 创建 `SqlSessionFactory`
+
+.org.apache.ibatis.session.SqlSessionFactoryBuilder#build
+[source,java,indent=0,options=nowrap]
+----
+public SqlSessionFactory build(InputStream inputStream, String environment, Properties properties) {
+    try {
+        // 创建 XMLConfigBuilder 和创建 Configuration
+        XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, environment, properties);
+        // 解析 MyBatis-config.xml，并返回 DefaultSqlSessionFactory
+        return build(parser.parse());
+    } catch (Exception e) {
+        throw ExceptionFactory.wrapException("Error building SqlSession.", e);
+    } finally {
+        ErrorContext.instance().reset();
+        try {
+            inputStream.close();
+        } catch (IOException e) {
+            // Intentionally ignore. Prefer previous error.
+        }
+    }
+}
+----
+
+.org.apache.ibatis.session.SqlSessionFactoryBuilder#build
+[source,java,indent=0,options=nowrap]
+----
+public SqlSessionFactory build(Configuration config) {
+    return new DefaultSqlSessionFactory(config);
+}
+----
+
 == 解析 `MyBatis-config.xml`
 
 对应的解析类 `org.apache.ibatis.builder.xml.XMLConfigBuilder`，入口在 `build` 方法。
-
-.org.apache.ibatis.session.SqlSessionFactoryBuilder#build(java.io.Reader, java.lang.String, java.util.Properties)
-[source,java,indent=0,options=nowrap]
-----
-    public SqlSessionFactory build(Reader reader, String environment, Properties properties) {
-        try {
-            // 同时创建 Configuration
-            XMLConfigBuilder parser = new XMLConfigBuilder(reader, environment, properties);
-            // 解析 MyBatis-config.xml，并返回 DefaultSqlSessionFactory
-            return build(parser.parse());
-        } catch (Exception e) {
-            throw ExceptionFactory.wrapException("Error building SqlSession.", e);
-        } finally {
-            ErrorContext.instance().reset();
-            try {
-                reader.close();
-            } catch (IOException e) {
-                // Intentionally ignore. Prefer previous error.
-            }
-        }
-    }
-----
 
 .org.apache.ibatis.builder.xml.XMLConfigBuilder#parse
 [source,java,indent=0,options=nowrap]
@@ -203,7 +214,7 @@ include::attachment$mybatis-init.puml[]
     }
 ----
 
-<1> 使用 `XMLStatementBuilder` 解析 `xml` 中的 `SQL` 语句
+<1> 解析完毕会添加到 `Configuration` 的 `mappedStatements` 中
 
 === 注册 `mapper` 接口
 
@@ -215,19 +226,21 @@ include::attachment$mybatis-init.puml[]
         if (namespace != null) {
             Class<?> boundType = null;
             try {
-                boundType = Resources.classForName(namespace);
+                boundType = Resources.classForName(namespace); <1>
             } catch (ClassNotFoundException e) {
                 // ignore, bound type is not required
             }
             if (boundType != null && !configuration.hasMapper(boundType)) {
+                // 标记已加载
                 configuration.addLoadedResource("namespace:" + namespace);
-                configuration.addMapper(boundType); <1>
+                configuration.addMapper(boundType); <2>
             }
         }
     }
 ----
 
-<1> 使用 `Configuration#addMapper` 注册 `mapper`，
+<1> 加载 `xml` 中 namespace 对应的 `class`
+<2> 使用 `Configuration#addMapper` 注册 `mapper`
 
 .org.apache.ibatis.session.Configuration#addMapper
 [source,java,indent=0,options=nowrap]
@@ -252,9 +265,8 @@ include::attachment$mybatis-init.puml[]
                 // 保存代理工厂到 knowMapper
                 knownMappers.put(type, new MapperProxyFactory<>(type)); <1>
                 // 解析接口中的注解和 xml 文件
-                MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
+                MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type); <2>
                 parser.parse();
-
                 loadCompleted = true;
             } finally {
                 // 如果添加失败，则删除
@@ -267,6 +279,7 @@ include::attachment$mybatis-init.puml[]
 ----
 
 <1> 在这里 `mapper` 接口被替换成了 `MapperProxyFactory`
+<2> 注解的 `SQL` 最终会生成 `ProviderSqlSource` 对象
 
 == 解析 `SQL`
 
@@ -520,6 +533,10 @@ public interface SqlSource {
 
 image::sql-session.png[]
 
+==== `ProviderSqlSource`
+
+To Be Continued.
+
 ==== DynamicSqlSource
 
 .org.apache.ibatis.scripting.xmltags.DynamicSqlSource#getBoundSql
@@ -559,7 +576,7 @@ public BoundSql getBoundSql(Object parameterObject) {
 }
 ----
 
-=== BoundSql
+=== `BoundSql`
 
 image::bound-sql.png[]
 

@@ -1,15 +1,3 @@
 = MyBatis 源码学习
 
 MyBatis 源码学习
-
-[plantuml]
-----
-@startmindmap
-* node
-** mybatis
-*** mybatis core
-*** mybatis spring
-** tk.mybatis
-** mybatis-plus
-@endmindmap
-----

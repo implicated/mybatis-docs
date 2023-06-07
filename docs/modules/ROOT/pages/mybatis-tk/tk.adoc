@@ -1,3 +1,22 @@
 = TkMyBatis
 
 == TkMyBatis
+
+* 重写了 `MapperScan`、`ClassPathMapperScanner`、`MapperFactoryBean` 三个类
+* 
+
+.tk.mybatis.spring.mapper.ClassPathMapperScanner#processBeanDefinitions
+[source,java,indent=0,options=nowrap]
+----
+            definition.setBeanClass(this.mapperFactoryBean.getClass());
+            //设置通用 Mapper
+            if(StringUtils.hasText(this.mapperHelperBeanName)){
+                definition.getPropertyValues().add("mapperHelper", new RuntimeBeanReference(this.mapperHelperBeanName));
+            } else {
+                //不做任何配置的时候使用默认方式
+                if(this.mapperHelper == null){
+                    this.mapperHelper = new MapperHelper();
+                }
+                definition.getPropertyValues().add("mapperHelper", this.mapperHelper);
+            }
+----

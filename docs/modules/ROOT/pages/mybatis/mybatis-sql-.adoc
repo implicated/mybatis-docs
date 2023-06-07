@@ -151,7 +151,7 @@ public Object execute(SqlSession sqlSession, Object[] args) { <1>
 image::default-sql-session-object.png[]
 ====
 
-== `DefaultSqlSession`
+== DefaultSqlSession
 
 DefaultSqlSession 是 DefaultSqlSession 的默认实现
 
@@ -362,7 +362,6 @@ private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowB
 
 To Be Continued.
 
-
 == `StatementHandler`
 
 === 创建 `StatementHandler`
@@ -456,4 +455,3 @@ public <E> List<E> query(Statement statement, ResultHandler resultHandler) throw
 == `ResultSetHandler`
 
 To Be Continued.
-

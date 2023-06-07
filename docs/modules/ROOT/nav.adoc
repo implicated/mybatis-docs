@@ -6,9 +6,9 @@
 ** xref:mybatis/mybatis-plugin.adoc[]
 * MyBatis Spring
 ** xref:mybatis-spring/mybatis-spring-integrations.adoc[]
-// ** xref:mybatis-spring/mybatis-spring-configuration.adoc[]
-// * MyBatis 衍生框架
-// ** xref:mybatis-tk/tk.adoc[]
-// ** xref:mybatis-tk/page-helper.adoc[]
-// ** xref:mybatis-plus/mybatis-plus.adoc[]
-// * xref:ref.adoc[]
+** xref:mybatis-spring/mybatis-spring-configuration.adoc[]
+* MyBatis 衍生框架
+** xref:mybatis-tk/tk.adoc[]
+** xref:mybatis-tk/page-helper.adoc[]
+** xref:mybatis-plus/mybatis-plus.adoc[]
+* xref:ref.adoc[]
